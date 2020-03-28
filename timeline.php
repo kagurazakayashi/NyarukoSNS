@@ -126,7 +126,9 @@ class timeline {
                                     array_push($commentarr,$commitem);
                                     $npost["comment"] = $commentarr;
                                     $postlist[$posti] = $npost;
-                                    break;
+                                    if (count($commentarr) >= 3) {
+                                        break;
+                                    }
                                 }
                             }
                         }

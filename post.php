@@ -97,7 +97,7 @@ class post {
             ];
             $dbreturn = $nlcore->db->select($columnArr,$tableStr,$whereDic);
             if ($dbreturn[0] != 1010000) {
-                $nscore->msg->stopmsg(4010400,$totpsecret,$nowfile);
+                $zecore->msg->stopmsg(4010400,$totpsecret,$cite);
             }
             $target = $dbreturn[2][0]; //列數據
             // 檢查用戶是否在對方黑名單中
