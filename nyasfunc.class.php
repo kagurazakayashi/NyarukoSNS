@@ -302,5 +302,147 @@ class zezefunc {
         }
         return $userhashs;
     }
+
+    //修改社交关系
+
+    /**
+    * @description: 关注对方
+    * @param String me 我的用户哈希
+    * @param String who 对方的用户哈希
+    * @param String totpsecret 加密用secret
+    */
+    function i_follow_f($me,$who,$totpsecret=null) {
+        global $nlcore; global $zecore;
+        if ($this->h_ban_i($me,$who)) { //被对方拉黑
+            $zecore->msg->stopmsg(4020108,$totpsecret);
+        }
+        if ($this->i_ban_h($me,$who)) { //将对方拉黑
+            $zecore->msg->stopmsg(4020109,$totpsecret);
+        }
+        // INSERT INTO z1_follow(fuser, tuser) VALUES ('I','W')
+        $tableStr = $zecore->cfg->tables["follow"];
+        $insertDic = [
+            "fuser" => $me,
+            "tuser" => $who,
+        ];
+        $dbreturn = $nlcore->db->insert($tableStr,$insertDic);
+        if ($dbreturn[0] >= 2000000) { //错
+            $zecore->msg->stopmsg(4020100,$totpsecret);
+        } else if ($dbreturn[3] == 0) { //重复操作，不操作
+        }
+        // UPDATE z1_follow SET friend=1 WHERE fuser='W' AND `tuser`='I'
+        $updateDic = [
+            "friend" => 1
+        ];
+        $whereDic = [
+            "fuser" => $who,
+            "tuser" => $me
+        ];
+        $dbreturn = $nlcore->db->update($updateDic,$tableStr,$whereDic);
+        if ($dbreturn[0] >= 2000000 || $dbreturn[3] > 1) { //错
+            $zecore->msg->stopmsg(4020101,$totpsecret);
+        }
+        if ($dbreturn[3] == 1) {
+            // UPDATE z1_follow SET friend=1 WHERE fuser='I' AND `tuser`='W'
+            $updateDic = [
+                "friend" => 1
+            ];
+            $whereDic = [
+                "fuser" => $me,
+                "tuser" => $who
+            ];
+            $dbreturn = $nlcore->db->update($updateDic,$tableStr,$whereDic);
+            if ($dbreturn[0] >= 2000000 || $dbreturn[3] > 1) { //错
+                $zecore->msg->stopmsg(4020102,$totpsecret);
+            }
+        }
+    }
+
+    /**
+    * @description: 取关对方
+    * @param String me 我的用户哈希
+    * @param String who 对方的用户哈希
+    * @param String totpsecret 加密用secret
+    */
+    function i_unfollow_f($me,$who,$totpsecret=null) {
+        // DELETE FROM z1_follow WHERE fuser='I' AND tuser='W'
+        global $nlcore; global $zecore;
+        $tableStr = $zecore->cfg->tables["follow"];
+        $whereDic = [
+            "fuser" => $me,
+            "tuser" => $who
+        ];
+        $dbreturn = $nlcore->db->delete($tableStr,$whereDic);
+        if ($dbreturn[0] >= 2000000) { //错
+            $zecore->msg->stopmsg(4020103,$totpsecret);
+        } else if ($dbreturn[3] != 1) { //重复操作，不报错
+        }
+        // UPDATE z1_follow SET friend=0 WHERE fuser='W' AND `tuser`='I'
+        $updateDic = [
+            "friend" => 0
+        ];
+        $whereDic = [
+            "fuser" => $who,
+            "tuser" => $me
+        ];
+        $dbreturn = $nlcore->db->update($updateDic,$tableStr,$whereDic);
+        if ($dbreturn[0] >= 2000000) { //错
+            $zecore->msg->stopmsg(4020104,$totpsecret);
+        } else if ($dbreturn[3] == 0) { //重复操作，不报错
+        }
+    }
+
+    /**
+    * @description: 拉黑对方
+    * @param String me 我的用户哈希
+    * @param String who 对方的用户哈希
+    * @param String totpsecret 加密用secret
+    */
+    function i_ban_f($me,$who,$totpsecret=null) {
+        global $nlcore; global $zecore;
+        if ($this->i_ban_h($me,$who)) {
+            $zecore->msg->stopmsg(4020110,$totpsecret);
+        }
+        // INSERT INTO z1_ban(fuser, tuser) VALUES ('I','W')
+        $tableStr = $zecore->cfg->tables["ban"];
+        $insertDic = [
+            "fuser" => $me,
+            "tuser" => $who,
+        ];
+        $dbreturn = $nlcore->db->insert($tableStr,$insertDic);
+        if ($dbreturn[0] >= 2000000) { //错
+            $zecore->msg->stopmsg(4020105,$totpsecret);
+        } else if ($dbreturn[3] == 0) { //重复操作，不报错
+        }
+        // DELETE FROM z1_follow WHERE (fuser='I' or tuser='I') AND (fuser='W' or tuser='W')
+        $tableStr = $zecore->cfg->tables["follow"];
+        $customWhere = "(fuser = '".$me."' or tuser = '".$me."') AND (fuser = '".$who."' or tuser = '".$who."')";
+        $dbreturn = $nlcore->db->delete($tableStr,[],$customWhere);
+        if ($dbreturn[0] >= 2000000) { //错
+            $zecore->msg->stopmsg(4020106,$totpsecret);
+        } else if ($dbreturn[3] == 0) { //重复操作，不报错
+        }
+    }
+
+    /**
+    * @description: 取消拉黑对方
+    * @param String me 我的用户哈希
+    * @param String who 对方的用户哈希
+    * @param String totpsecret 加密用secret
+    */
+    function i_unban_f($me,$who,$totpsecret=null) {
+        // DELETE FROM z1_ban WHERE fuser='I' AND tuser='W'
+        global $nlcore; global $zecore;
+        $tableStr = $zecore->cfg->tables["ban"];
+        $whereDic = [
+            "fuser" => $me,
+            "tuser" => $who
+        ];
+        $dbreturn = $nlcore->db->delete($tableStr,$whereDic);
+        if ($dbreturn[0] >= 2000000) { //错
+            $zecore->msg->stopmsg(4020107,$totpsecret);
+        } else if ($dbreturn[3] != 1) { //重复操作，不报错
+        }
+    }
 }
 ?>
