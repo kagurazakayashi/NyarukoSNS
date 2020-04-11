@@ -1,17 +1,17 @@
 <?php
-// USE: require_once "zeze/zezecore.class.php";
+// USE: require_once "nyas/nyascore.class.php";
 $phpfiledir = pathinfo(__FILE__)["dirname"].DIRECTORY_SEPARATOR;
-require_once $phpfiledir."zezeconfig.class.php";
-require_once $phpfiledir."zezemsg.class.php";
-require_once $phpfiledir."zezefunc.class.php";
-class zezecore {
+require_once $phpfiledir."nyasconfig.class.php";
+require_once $phpfiledir."nyasmsg.class.php";
+require_once $phpfiledir."nyasfunc.class.php";
+class nyascore {
     public $cfg;
     public $msg;
     public $func;
     function __construct() {
-        $this->cfg = new zezesetting();
-        $this->msg = new zezemsg();
-        $this->func = new zezefunc();
+        $this->cfg = new nyassetting();
+        $this->msg = new nyasmsg();
+        $this->func = new nyasfunc();
     }
     function applyconfig() {
     }
@@ -22,6 +22,6 @@ class zezecore {
     }
 }
 global $zecore;
-if (!isset($zecore)) $zecore = new zezecore();
+if (!isset($zecore)) $zecore = new nyascore();
 $zecore->applyconfig();
 ?>

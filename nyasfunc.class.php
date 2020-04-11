@@ -1,9 +1,9 @@
 <?php
 $phpfiledir = pathinfo(__FILE__)["dirname"].DIRECTORY_SEPARATOR;
 $usersrc = $phpfiledir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPARATOR."src".DIRECTORY_SEPARATOR;
-require_once $phpfiledir."zezecore.class.php";
+require_once $phpfiledir."nyascore.class.php";
 require_once $usersrc."nyacore.class.php";
-class zezefunc {
+class nyasfunc {
     public $totpsecret = null;
 
     /**

@@ -1,5 +1,5 @@
 <?php
-class zezesetting {
+class nyassetting {
     //数据库表设置
     var $tables = [
         "comment" => "s1_comment",
