@@ -1,0 +1,13 @@
+._*
+.DS_Store
+Thumbs.db
+vendor
+.tmp
+tmp*
+__pycache__
+.vs*
+node_modules
+upload/*
+tests/summernote/*
+upload/*
+tests/testconfig.json
