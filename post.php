@@ -17,6 +17,7 @@ class addpost {
         $usertoken = $jsonarr["token"];
         $nlcore->safe->is_rhash64($usertoken);
         $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpsecret);
+        $userhash = $userpwdtimes["userhash"];
         if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret); //token无效
         // 检查标题
         $title = $jsonarr["title"] ?? null;
@@ -34,22 +35,13 @@ class addpost {
             $share = strtoupper($jsonarr["share"]);
             if (!in_array($share,["PUBLIC"])) $zecore->msg->stopmsg(4010001,$totpsecret);
         }
-        // 检查文件
-        $files = (isset($jsonarr["files"]) && strlen($jsonarr["files"]) >= 32) ? $jsonarr["files"] : null;
-        if ($files) {
-            $filesarr = explode(",",$jsonarr["files"]);
-            foreach ($filesarr as $nowfile) {
-                if (!preg_match("/[\w\/]*[\d]{11}_[\w]{32}/",$nowfile)) {
-                    $zecore->msg->stopmsg(4010200,$totpsecret,$nowfile);
-                }
-            }
-        }
         // 引用其他贴文
+        $files = null;
         $cite = (isset($jsonarr["cite"]) && $nlcore->safe->is_rhash64($jsonarr["cite"])) ? $jsonarr["cite"] : null;
         if ($cite) {
             // 查询目标贴文是否允许转发
             $tableStr = $zecore->cfg->tables["posts"];
-            $columnArr = ["id","user","noforward","forwardnum","forwardmax"];
+            $columnArr = ["id","userhash","noforward","forwardnum","forwardmax"];
             $whereDic = [
                 "post" => $cite
             ];
@@ -57,25 +49,26 @@ class addpost {
             if ($dbreturn[0] != 1010000) {
                 $zecore->msg->stopmsg(4010400,$totpsecret,$nowfile);
             }
-            $target = $dbreturn[2][0];
-            //TODO: 检查用户是否在对方黑名单中
-
+            $target = $dbreturn[2][0]; //列数据
+            // 检查用户是否在对方黑名单中
+            if ($zecore->func->h_ban_i($userhash,$target["userhash"],$totpsecret)) {
+                $zecore->msg->stopmsg(4010403,$totpsecret);
+            }
             $targetid = $target["id"];
             $noforward = $target["noforward"];
             if (intval($noforward) > 0) {
                 $zecore->msg->stopmsg(4010401,$totpsecret,$nowfile);
             }
-            // 为对方转发数+1
-            $forwardnum = intval($target["forwardnum"]) + 1;
-            $forwardmax = intval($target["forwardmax"]) + 1;
-            $updateDic = [
-                "forwardnum" => $forwardnum,
-                "forwardmax" => $forwardmax
-            ];
-            $whereDic = ["id" => $targetid];
-            $result = $nlcore->db->update($updateDic,$tableStr,$whereDic);
-            if ($dbreturn[0] >= 2000000) {
-                $zecore->msg->stopmsg(4010402,$totpsecret);
+        } else {
+            // 如果是转发贴，丢弃文件附件；如果不是转发贴，检查文件附件
+            $files = (isset($jsonarr["files"]) && strlen($jsonarr["files"]) >= 32) ? $jsonarr["files"] : null;
+            if ($files) {
+                $filesarr = explode(",",$jsonarr["files"]);
+                foreach ($filesarr as $nowfile) {
+                    if (!preg_match("/[\w\/]*[\d]{11}_[\w]{32}/",$nowfile)) {
+                        $zecore->msg->stopmsg(4010200,$totpsecret,$nowfile);
+                    }
+                }
             }
         }
         // 检查正文
@@ -124,9 +117,22 @@ class addpost {
         if (($nocomment != 0 && $nocomment != 1) || ($noforward != 0 && $noforward != 1)) $zecore->msg->stopmsg(4010001,$totpsecret);
         // 其他标识
         $posthash = $nlcore->safe->randhash();
-        $userhash = $userpwdtimes["userhash"];
         // 封装正文
         $content = addslashes($content);
+        if ($cite) {
+            // 为对方转发数+1
+            $forwardnum = intval($target["forwardnum"]) + 1;
+            $forwardmax = intval($target["forwardmax"]) + 1;
+            $updateDic = [
+                "forwardnum" => $forwardnum,
+                "forwardmax" => $forwardmax
+            ];
+            $whereDic = ["id" => $targetid];
+            $result = $nlcore->db->update($updateDic,$tableStr,$whereDic);
+            if ($dbreturn[0] >= 2000000) {
+                $zecore->msg->stopmsg(4010402,$totpsecret);
+            }
+        }
         // 数据库
         $tableStr = $zecore->cfg->tables["posts"];
         $insertDic = [
@@ -186,13 +192,6 @@ class addpost {
             $zecore->msg->stopmsg(2040108,$totpsecret);
         }
         return $tagid;
-    }
-
-    //转发贴文
-    function forward() {
-        global $nlcore;
-        global $zecore;
-
     }
 }
 $addpost = new addpost();
