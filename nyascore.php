@@ -21,7 +21,7 @@ class nyascore {
         $this->func = null; unset($this->func);
     }
 }
-global $zecore;
-if (!isset($zecore)) $zecore = new nyascore();
-$zecore->applyconfig();
+global $nscore;
+if (!isset($nscore)) $nscore = new nyascore();
+$nscore->applyconfig();
 ?>

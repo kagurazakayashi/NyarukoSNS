@@ -6,72 +6,99 @@ require_once $usersrc."nyacore.class.php";
 class addpost {
     function add() {
         global $nlcore;
-        global $zecore;
-        $jsonarrTotpsecret = $nlcore->safe->decryptargv($zecore->cfg->limittime["post"]);
+        global $nscore;
+        $jsonarrTotpsecret = $nlcore->safe->decryptargv($nscore->cfg->limittime["post"]);
         $jsonarr = $jsonarrTotpsecret[0];
         $totpsecret = $jsonarrTotpsecret[1];
         $totptoken = $jsonarrTotpsecret[2];
         $ipid = $jsonarrTotpsecret[3];
         $appid = $jsonarrTotpsecret[4];
-        // 检查用户是否登录
+        // 檢查用戶是否登入
         $usertoken = $jsonarr["token"];
         $nlcore->safe->is_rhash64($usertoken);
         $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpsecret);
         $userhash = $userpwdtimes["userhash"];
-        if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret); //token无效
-        // 检查标题
+        if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret); //token無效
+        // 檢查請求模式
+        $postmode = 0; //0发布 1修改 2刪除
+        $editpost = null;
+        if (isset($jsonarr["editpost"])) { // 編輯模式
+            if (!$nlcore->safe->is_rhash64($jsonarr["editpost"])) $nscore->msg->stopmsg(4010500,$totpsecret);
+            $editpost = $jsonarr["editpost"];
+            $postmode = 1;
+            // 取得要編輯的貼文
+            $tableStr = $nscore->cfg->tables["posts"];
+            $columnArr = ["id","userhash","title","type","content","tag","files","share","mention","nocomment","noforward","cite"];
+            $whereDic = [
+                "post" => $editpost
+            ];
+            $dbreturn = $nlcore->db->select($columnArr,$tableStr,$whereDic);
+            if ($dbreturn[0] != 1010000) {
+                $nscore->msg->stopmsg(4010501,$totpsecret,$nowfile);
+            }
+            $target = $dbreturn[2][0]; //列數據
+            $target["post"] = $editpost;
+            $editpost = $target;
+        }
+        // 檢查標題
         $title = $jsonarr["title"] ?? null;
         $banwords = $nlcore->safe->wordfilter($title,true,$totpsecret);
-        if ($banwords[0] == true) $zecore->msg->stopmsg(2020300,$totpsecret,"title");
-        // 检查媒体类型
+        if ($banwords[0] == true) $nscore->msg->stopmsg(2020300,$totpsecret);
+        // 檢查媒體類型
         $mtype = "TEXT";
         if (isset($jsonarr["mtype"])) {
             $mtype = strtoupper($jsonarr["mtype"]);
-            if (!in_array($mtype,["TEXT","IMAGE","VIDEO"])) $zecore->msg->stopmsg(4010001,$totpsecret);
+            if (!in_array($mtype,["TEXT","IMAGE","VIDEO"])) $nscore->msg->stopmsg(4010001,$totpsecret);
         }
-        // 检查分享范围
-        $share = "PUBLIC"; //暂时只支持 PUBLIC
+        // 檢查分享範圍
+        $share = "PUBLIC"; //暫時隻支援 PUBLIC
         if (isset($jsonarr["share"])) {
             $share = strtoupper($jsonarr["share"]);
-            if (!in_array($share,["PUBLIC"])) $zecore->msg->stopmsg(4010001,$totpsecret);
+            if (!in_array($share,["PUBLIC"])) $nscore->msg->stopmsg(4010001,$totpsecret);
         }
-        // 引用其他贴文
+        // 如果是修改模式，禁止對引用進行修改
+        if ($postmode == 1 && isset($editpost["cite"]) && isset($jsonarr["cite"])) {
+            if (strcmp($editpost["cite"],$jsonarr["cite"]) != 0) {
+                $nscore->msg->stopmsg(4010502,$totpsecret);
+            }
+        }
+        // 引用其他貼文
         $files = null;
         $cite = (isset($jsonarr["cite"]) && $nlcore->safe->is_rhash64($jsonarr["cite"])) ? $jsonarr["cite"] : null;
         if ($cite) {
-            // 查询目标贴文是否允许转发
-            $tableStr = $zecore->cfg->tables["posts"];
+            // 查詢目標貼文是否允許轉發
+            $tableStr = $nscore->cfg->tables["posts"];
             $columnArr = ["id","userhash","noforward","forwardnum","forwardmax"];
             $whereDic = [
                 "post" => $cite
             ];
             $dbreturn = $nlcore->db->select($columnArr,$tableStr,$whereDic);
             if ($dbreturn[0] != 1010000) {
-                $zecore->msg->stopmsg(4010400,$totpsecret,$nowfile);
+                $nscore->msg->stopmsg(4010400,$totpsecret,$nowfile);
             }
-            $target = $dbreturn[2][0]; //列数据
-            // 检查用户是否在对方黑名单中
-            if ($zecore->func->h_ban_i($userhash,$target["userhash"],$totpsecret)) {
-                $zecore->msg->stopmsg(4010403,$totpsecret);
+            $target = $dbreturn[2][0]; //列數據
+            // 檢查用戶是否在對方黑名單中
+            if ($nscore->func->h_ban_i($userhash,$target["userhash"],$totpsecret)) {
+                $nscore->msg->stopmsg(4010403,$totpsecret);
             }
             $targetid = $target["id"];
             $noforward = $target["noforward"];
             if (intval($noforward) > 0) {
-                $zecore->msg->stopmsg(4010401,$totpsecret,$nowfile);
+                $nscore->msg->stopmsg(4010401,$totpsecret,$nowfile);
             }
         } else {
-            // 如果是转发贴，丢弃文件附件；如果不是转发贴，检查文件附件
+            // 如果是轉發貼，丟棄文件附件；如果不是轉發貼，檢查文件附件
             $files = (isset($jsonarr["files"]) && strlen($jsonarr["files"]) >= 32) ? $jsonarr["files"] : null;
             if ($files) {
                 $filesarr = explode(",",$jsonarr["files"]);
                 foreach ($filesarr as $nowfile) {
                     if (!preg_match("/[\w\/]*[\d]{11}_[\w]{32}/",$nowfile)) {
-                        $zecore->msg->stopmsg(4010200,$totpsecret,$nowfile);
+                        $nscore->msg->stopmsg(4010200,$totpsecret,$nowfile);
                     }
                 }
             }
         }
-        // 检查正文
+        // 檢查正文
         $content = $jsonarr["content"] ?? "";
         if (strlen($content) == 0) {
             if ($cite) $content = "转发贴文";
@@ -79,10 +106,10 @@ class addpost {
             else if ($mtype == "VIDEO") $content = "分享视频";
         }
         $contentlen = strlen($content);
-        if ($contentlen == 0 && !$files && !$cite) $zecore->msg->stopmsg(4010000,$totpsecret);
+        if ($contentlen == 0 && !$files && !$cite) $nscore->msg->stopmsg(4010000,$totpsecret);
         $banwords = $nlcore->safe->wordfilter($content,true,$totpsecret);
-        if ($banwords[0] == true) $zecore->msg->stopmsg(2020300,$totpsecret,"content");
-        // 检查提及是否在正文中,并转换成用户哈希字符串
+        if ($banwords[0] == true) $nscore->msg->stopmsg(2020300,$totpsecret,"content");
+        // 檢查提及是否在正文中,並轉換成用戶哈希字符串
         $mention = (isset($jsonarr["mention"]) && strlen($jsonarr["mention"]) > 5) ? $jsonarr["mention"] : null;
         if ($mention) {
             $mention = explode(",",$jsonarr["mention"]);
@@ -91,36 +118,36 @@ class addpost {
                 $namearr = explode("#",$nowmention);
                 $name = $namearr[0];
                 if (strstr($content, $name) == false) {
-                    $zecore->msg->stopmsg(4010101,$totpsecret,$content);
+                    $nscore->msg->stopmsg(4010101,$totpsecret,$content);
                 }
                 $mention[$i] = $nlcore->func->fullnickname2userhash($namearr,$totpsecret)[2];
             }
             $mention = implode(",", $mention);
         }
-        // 检查tag是否在正文中,并转换成tag
+        // 檢查tag是否在正文中,並轉換成tag
         $tag = (isset($jsonarr["tag"]) && strlen($jsonarr["tag"]) > 1) ? $jsonarr["tag"] : null;
         if ($tag) {
             $tag = explode(",",$jsonarr["tag"]);
             for ($i=0; $i < count($tag); $i++) {
                 $nowtag = $tag[$i];
                 if (strstr($content, $name) == false) {
-                    $zecore->msg->stopmsg(4010300,$totpsecret,$content);
+                    $nscore->msg->stopmsg(4010300,$totpsecret,$content);
                 }
                 $tag[$i] = $this->gettagid($nowtag,$totpsecret);
             }
             $tag = implode(",", $tag);
         }
-        // 检查关闭评论
+        // 檢查關閉評論
         $nocomment = isset($jsonarr["nocomment"]) ? intval($jsonarr["nocomment"]) : 0;
-        // 检查关闭转发
+        // 檢查關閉轉發
         $noforward = isset($jsonarr["noforward"]) ? intval($jsonarr["noforward"]) : 0;
-        if (($nocomment != 0 && $nocomment != 1) || ($noforward != 0 && $noforward != 1)) $zecore->msg->stopmsg(4010001,$totpsecret);
-        // 其他标识
+        if (($nocomment != 0 && $nocomment != 1) || ($noforward != 0 && $noforward != 1)) $nscore->msg->stopmsg(4010001,$totpsecret);
+        // 其他標識
         $posthash = $nlcore->safe->randhash();
-        // 封装正文
+        // 封裝正文
         $content = addslashes($content);
-        if ($cite) {
-            // 为对方转发数+1
+        if ($cite && $postmode == 0) {
+            // 為對方轉發數+1
             $forwardnum = intval($target["forwardnum"]) + 1;
             $forwardmax = intval($target["forwardmax"]) + 1;
             $updateDic = [
@@ -130,43 +157,64 @@ class addpost {
             $whereDic = ["id" => $targetid];
             $result = $nlcore->db->update($updateDic,$tableStr,$whereDic);
             if ($dbreturn[0] >= 2000000) {
-                $zecore->msg->stopmsg(4010402,$totpsecret);
+                $nscore->msg->stopmsg(4010402,$totpsecret);
             }
         }
-        // 数据库
-        $tableStr = $zecore->cfg->tables["posts"];
-        $insertDic = [
-            "post" => $posthash,
-            "user" => $userhash,
-            "title" => $title,
-            "type" => $mtype,
-            "content" => $content,
-            "files" => $files,
-            "share" => $share,
-            "mention" => $mention,
-            "nocomment" => $nocomment,
-            "noforward" => $noforward,
-            "cite" => $cite
-        ];
-        $result = $nlcore->db->insert($tableStr,$insertDic);
-        if ($result[0] >= 2000000) $zecore->msg->stopmsg(2040108,$totpsecret);
-        $returnarr = $zecore->msg->m(0,3000000);
+        $tableStr = $nscore->cfg->tables["posts"];
+        $returncode = 4000000;
+        if ($postmode == 0) {
+            // 數據庫操作：發帖
+            $insertDic = [
+                "post" => $posthash,
+                "userhash" => $userhash,
+                "title" => $title,
+                "type" => $mtype,
+                "content" => $content,
+                "files" => $files,
+                "share" => $share,
+                "mention" => $mention,
+                "nocomment" => $nocomment,
+                "noforward" => $noforward,
+                "cite" => $cite
+            ];
+            $result = $nlcore->db->insert($tableStr,$insertDic);
+            if ($result[0] >= 2000000) $nscore->msg->stopmsg(2040108,$totpsecret);
+            $returncode = 3000000;
+        } else if ($postmode == 1) {
+            // 數據庫操作：修改貼文
+            $updateDic = [
+                "title" => $title,
+                "type" => $mtype,
+                "content" => $content,
+                "files" => $files,
+                "share" => $share,
+                "mention" => $mention,
+                "nocomment" => $nocomment,
+                "noforward" => $noforward,
+                "modified" => date("Y-m-d H:i:s",time())
+            ];
+            $whereDic = ["id" => $editpost["id"]];
+            $result = $nlcore->db->update($updateDic,$tableStr,$whereDic);
+            if ($result[0] >= 2000000) $nscore->msg->stopmsg(4010503,$totpsecret);
+            $returncode = 3000001;
+        }
+        $returnarr = $nscore->msg->m(0,$returncode);
         $returnarr["post"] = $posthash;
         echo $nlcore->safe->encryptargv($returnarr,$totpsecret);
     }
 
-    //获得tagid，没有就新建一个
+    //獲得tagid，冇有就新建一個
     function gettagid($tag,$totpsecret) {
         global $nlcore;
-        global $zecore;
+        global $nscore;
         $columnArr = ["id","stat","hot","hotmax"];
-        $tableStr = $zecore->cfg->tables["tag"];
+        $tableStr = $nscore->cfg->tables["tag"];
         $whereDic = [
             "tag" => $tag
         ];
         $dbreturn = $nlcore->db->select($columnArr,$tableStr,$whereDic);
         $tagid = -1;
-        if ($dbreturn[0] == 1010000) { //成功，写热度
+        if ($dbreturn[0] == 1010000) { //成功，寫熱度
             $returndata = $dbreturn[2][0];
             $tagid = intval($returndata["id"]);
             $hot = intval($returndata["hot"]) + 1;
@@ -178,18 +226,18 @@ class addpost {
             $whereDic = ["id" => $tagid];
             $result = $nlcore->db->update($updateDic,$tableStr,$whereDic);
             if ($dbreturn[0] >= 2000000) {
-                $zecore->msg->stopmsg(4010302,$totpsecret);
+                $nscore->msg->stopmsg(4010302,$totpsecret);
             }
         } else if ($dbreturn[0] == 1010001) { //需要新增
             $insertDic = ["tag" => $tag];
             $result = $nlcore->db->insert($tableStr,$insertDic);
             if ($dbreturn[0] >= 2000000) {
-                $zecore->msg->stopmsg(4010303,$totpsecret);
+                $nscore->msg->stopmsg(4010303,$totpsecret);
             } else {
                 $tagid = $result[1];
             }
         } else {
-            $zecore->msg->stopmsg(2040108,$totpsecret);
+            $nscore->msg->stopmsg(2040108,$totpsecret);
         }
         return $tagid;
     }
