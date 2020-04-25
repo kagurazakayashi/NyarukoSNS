@@ -1,10 +1,14 @@
 <?php
+/**
+ * @description: 貼文增刪改查
+ * @package NyarukoSNS
+*/
 $phpfiledir = pathinfo(__FILE__)["dirname"].DIRECTORY_SEPARATOR;
 $usersrc = $phpfiledir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPARATOR."src".DIRECTORY_SEPARATOR;
 require_once $phpfiledir."nyascore.class.php";
 require_once $usersrc."nyacore.class.php";
 class addpost {
-    function add() {
+    function add():void {
         global $nlcore;
         global $nscore;
         $jsonarrTotpsecret = $nlcore->safe->decryptargv($nscore->cfg->limittime["post"]);
@@ -36,9 +40,15 @@ class addpost {
             if ($dbreturn[0] != 1010000) {
                 $nscore->msg->stopmsg(4010501,$totpsecret,$nowfile);
             }
-            $target = $dbreturn[2][0]; //列數據
+            $target = $dbreturn[2][0]; // 列數據
             $target["post"] = $editpost;
             $editpost = $target;
+        } else if (isset($jsonarr["delpost"])) { // 刪除模式
+            if (!$nlcore->safe->is_rhash64($jsonarr["delpost"])) $nscore->msg->stopmsg(4010600,$totpsecret);
+            $editpost = $jsonarr["delpost"];
+            $postmode = 2;
+            $this->delpostcomment($editpost,$totpsecret);
+            die(); //TODO
         }
         // 檢查標題
         $title = $jsonarr["title"] ?? null;
@@ -203,8 +213,13 @@ class addpost {
         echo $nlcore->safe->encryptargv($returnarr,$totpsecret);
     }
 
-    //獲得tagid，冇有就新建一個
-    function gettagid($tag,$totpsecret) {
+    /**
+    * @description: 獲得tagid，冇有就新建一個
+    * @param String tag 標簽哈希
+    * @param String totpsecret 加密用secret
+    * @param Int tag ID
+    */
+    function gettagid(string $tag, string $totpsecret):int {
         global $nlcore;
         global $nscore;
         $columnArr = ["id","stat","hot","hotmax"];
@@ -239,7 +254,58 @@ class addpost {
         } else {
             $nscore->msg->stopmsg(2040108,$totpsecret);
         }
-        return $tagid;
+        return intval($tagid);
+    }
+
+    /**
+    * @description: 清空某個貼文的評論
+    * @param String post 貼文哈希
+    * @param String totpsecret 加密用secret
+    */
+    function delpostcomment(string $post, string $totpsecret):void {
+        global $nlcore;
+        global $nscore;
+        // 遍曆此貼文的全部評論
+        $tableStr = $nscore->cfg->tables["comment"];
+        $columnArr = ["comment"];
+        $whereDic = ["post" => $post];
+        $dbreturn = $nlcore->db->select($columnArr,$tableStr,$whereDic);
+        // 遍曆評論唯一哈希
+        if ($dbreturn[0] == 1010000) { // 有評論
+            $comments = $dbreturn[2];
+            foreach ($comments as $comment) { // 遍曆評論
+                $commenthash = $comment["comment"];
+                // 獲取評論的評論
+                $whereDic = [
+                    "comment" => $commenthash,
+                    "post" => $commenthash // 被評論的貼文和評論
+                ];
+                $dbreturn = $nlcore->db->select($columnArr,$tableStr,$whereDic,"","OR");
+                if ($dbreturn[0] == 1010000) { // 有評論的評論
+                    $comments2 = $dbreturn[2];
+                    $delcomments = []; // 需要批量移除的點贊
+                    for ($i=0; $i < count($comments2); $i++) { // 遍曆論的評論
+                        $commenthash2 = $comments2[$i]["comment"];
+                        $delcommentskey = "post*".strval($i);
+                        $delcomments[$delcommentskey] = $commenthash2;
+                    }
+                    // 刪除所有貼文評論（包括評論的評論）的點贊
+                    $tableStr = $nscore->cfg->tables["like"];
+                    $dbreturn = $nlcore->db->delete($tableStr,$delcomments,"","OR");
+                    if ($dbreturn[0] >= 2000000) {
+                        $nscore->msg->stopmsg(4030100,$totpsecret,$nowfile);
+                    }
+                } else if ($dbreturn[0] == 1010001) { // 無評論的評論
+
+                } else { // 異常
+                    $nscore->msg->stopmsg(4020201,$totpsecret);
+                }
+            }
+        } else if ($dbreturn[0] == 1010001) { // 無評論
+
+        } else { // 異常
+            $nscore->msg->stopmsg(4020200,$totpsecret);
+        }
     }
 }
 $addpost = new addpost();
