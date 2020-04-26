@@ -47,8 +47,11 @@ class addpost {
             if (!$nlcore->safe->is_rhash64($jsonarr["delpost"])) $nscore->msg->stopmsg(4010600,$totpsecret);
             $editpost = $jsonarr["delpost"];
             $postmode = 2;
-            $this->delpostcomment($editpost,$totpsecret);
-            die(); //TODO
+            $this->deletepost($editpost,$totpsecret);
+            $returnarr = $nscore->msg->m(0,3000002);
+            $returnarr["post"] = $editpost;
+            echo $nlcore->safe->encryptargv($returnarr,$totpsecret);
+            return;
         }
         // 檢查標題
         $title = $jsonarr["title"] ?? null;
@@ -258,11 +261,11 @@ class addpost {
     }
 
     /**
-    * @description: 清空某個貼文的評論
+    * @description: 刪除貼文
     * @param String post 貼文哈希
     * @param String totpsecret 加密用secret
     */
-    function delpostcomment(string $post, string $totpsecret):void {
+    function deletepost(string $post, string $totpsecret):void {
         global $nlcore;
         global $nscore;
         // 遍曆此貼文的全部評論
@@ -283,28 +286,55 @@ class addpost {
                 $dbreturn = $nlcore->db->select($columnArr,$tableStr,$whereDic,"","OR");
                 if ($dbreturn[0] == 1010000) { // 有評論的評論
                     $comments2 = $dbreturn[2];
-                    $delcomments = []; // 需要批量移除的點贊
+                    $dellikes = []; // 需要批量移除的點贊
+                    $delcomments = []; // 需要批量移除的評論
                     for ($i=0; $i < count($comments2); $i++) { // 遍曆論的評論
                         $commenthash2 = $comments2[$i]["comment"];
-                        $delcommentskey = "post*".strval($i);
+                        $dellikeskey = "post*".strval($i);
+                        $dellikes[$dellikeskey] = $commenthash2;
+                        $delcommentskey = "comment*".strval($i);
                         $delcomments[$delcommentskey] = $commenthash2;
                     }
-                    // 刪除所有貼文評論（包括評論的評論）的點贊
+                    // 刪除所有貼文評論的點贊
                     $tableStr = $nscore->cfg->tables["like"];
-                    $dbreturn = $nlcore->db->delete($tableStr,$delcomments,"","OR");
+                    $dbreturn = $nlcore->db->delete($tableStr,$dellikes,"","OR");
                     if ($dbreturn[0] >= 2000000) {
                         $nscore->msg->stopmsg(4030100,$totpsecret,$nowfile);
                     }
+                    // 刪除所有貼文評論
+                    $allcomment = array_merge($dellikes,$delcomments);
+                    $tableStr = $nscore->cfg->tables["comment"];
+                    $dbreturn = $nlcore->db->delete($tableStr,$allcomment,"","OR");
+                    if ($dbreturn[0] >= 2000000) {
+                        $nscore->msg->stopmsg(4020202,$totpsecret,$nowfile);
+                    }
                 } else if ($dbreturn[0] == 1010001) { // 無評論的評論
-
                 } else { // 異常
                     $nscore->msg->stopmsg(4020201,$totpsecret);
                 }
             }
         } else if ($dbreturn[0] == 1010001) { // 無評論
-
         } else { // 異常
             $nscore->msg->stopmsg(4020200,$totpsecret);
+        }
+
+        // 移除貼文點贊
+        $tableStr = $nscore->cfg->tables["like"];
+        $whereDic = [
+            "post" => $post
+        ];
+        $dbreturn = $nlcore->db->delete($tableStr,$whereDic);
+        if ($dbreturn[0] >= 2000000) {
+            $nscore->msg->stopmsg(4030101,$totpsecret,$nowfile);
+        }
+        // 移除貼文
+        $tableStr = $nscore->cfg->tables["posts"];
+        $whereDic = [
+            "post" => $post
+        ];
+        $dbreturn = $nlcore->db->delete($tableStr,$whereDic);
+        if ($dbreturn[0] >= 2000000) {
+            $nscore->msg->stopmsg(4010601,$totpsecret,$nowfile);
         }
     }
 }
