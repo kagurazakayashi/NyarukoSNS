@@ -1,17 +1,17 @@
 <?php
-// USE: require_once "nyas/nyascore.class.php";
+// USE: require_once "nys/nscore.class.php";
 $phpfiledir = pathinfo(__FILE__)["dirname"].DIRECTORY_SEPARATOR;
-require_once $phpfiledir."nyasconfig.class.php";
-require_once $phpfiledir."nyasmsg.class.php";
-require_once $phpfiledir."nyasfunc.class.php";
-class nyascore {
+require_once $phpfiledir."nysconfig.class.php";
+require_once $phpfiledir."nysmsg.class.php";
+require_once $phpfiledir."nysfunc.class.php";
+class nyscore {
     public $cfg;
     public $msg;
     public $func;
     function __construct() {
-        $this->cfg = new nyassetting();
-        $this->msg = new nyasmsg();
-        $this->func = new nyasfunc();
+        $this->cfg = new nssetting();
+        $this->msg = new nsmsg();
+        $this->func = new nsfunc();
     }
     function applyconfig() {
     }
@@ -22,6 +22,6 @@ class nyascore {
     }
 }
 global $nscore;
-if (!isset($nscore)) $nscore = new nyascore();
+if (!isset($nscore)) $nscore = new nscore();
 $nscore->applyconfig();
 ?>

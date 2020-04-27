@@ -2,7 +2,7 @@
 
 # NyarukoSNS
 
-[NyarukoLogin](https://github.com/kagurazakayashi/NyarukoLogin) 的插件，为其提供人际关系处理和内容生产能力。（ps.这不是一个SNS系统）
+[NyarukoLogin](https://github.com/kagurazakayashi/NyarukoLogin) 的插件，为其提供人际关系处理和内容生产能力。
 
 - 注意：这个程序尚未做完，请勿使用。
 - 兼容性以 NyarukoLogin 为准。

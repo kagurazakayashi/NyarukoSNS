@@ -1,9 +1,9 @@
 <?php
 $phpfiledir = pathinfo(__FILE__)["dirname"].DIRECTORY_SEPARATOR;
 $usersrc = $phpfiledir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPARATOR."src".DIRECTORY_SEPARATOR;
-require_once $phpfiledir."nyascore.class.php";
+require_once $phpfiledir."nyscore.class.php";
 require_once $usersrc."nyacore.class.php";
-class nyasfunc {
+class nysfunc {
     public $totpsecret = null;
 
     /**
@@ -26,7 +26,7 @@ class nyasfunc {
             }
         } else if ($dbreturn[0] == 1010001) { //无，不处理
         } else { //错
-            $nscore->msg->stopmsg(4020000,$totpsecret);
+            $nscore->msg->stopmsg(4040000,$totpsecret);
         }
         return $userhashs;
         // ["Dl4oGEJoyqf00yPXEbohjWYnsxy4n7dXbaebMmgCVMLbNkn0C9bZqtPi1mkGdjwo","lIvEST0CJPp3LaRQAHqm174iVKD28Eeu4AhwDLRpglRrHwFjZRgODFMprHxYt3Uc"]
@@ -52,7 +52,7 @@ class nyasfunc {
             }
         } else if ($dbreturn[0] == 1010001) { //无，不处理
         } else { //错
-            $nscore->msg->stopmsg(4020001,$totpsecret);
+            $nscore->msg->stopmsg(4040001,$totpsecret);
         }
         return $userhashs;
         // ["lIvEST0CJPp3LaRQAHqm174iVKD28Eeu4AhwDLRpglRrHwFjZRgODFMprHxYt3Uc","Dl4oGEJoyqf00yPXEbohjWYnsxy4n7dXbaebMmgCVMLbNkn0C9bZqtPi1mkGdjwo"]
@@ -85,10 +85,10 @@ class nyasfunc {
             }
         } else if ($dbreturn[0] == 1010001) { //无，不处理
         } else { //错
-            $nscore->msg->stopmsg(4020002,$totpsecret);
+            $nscore->msg->stopmsg(4040002,$totpsecret);
         }
         // if (count($userhashs) % 2 != 0) { //错:是奇数,数据错误
-        //     $nscore->msg->stopmsg(4020003,$totpsecret);
+        //     $nscore->msg->stopmsg(4040003,$totpsecret);
         // }
         $userhashs = array_unique($userhashs);
         return $userhashs;
@@ -119,10 +119,10 @@ class nyasfunc {
             } else if ($datacount == 1) { //是
                 $isok = true;
             } else { //错
-                $nscore->msg->stopmsg(4020004,$totpsecret);
+                $nscore->msg->stopmsg(4040004,$totpsecret);
             }
         } else { //无=错
-            $nscore->msg->stopmsg(4020005,$totpsecret);
+            $nscore->msg->stopmsg(4040005,$totpsecret);
         }
         return $isok; //bool
     }
@@ -174,10 +174,10 @@ class nyasfunc {
             } else if ($datacount == 1) { //是
                 $isok = true;
             } else { //错
-                $nscore->msg->stopmsg(4020006,$totpsecret);
+                $nscore->msg->stopmsg(4040006,$totpsecret);
             }
         } else { //无=错
-            $nscore->msg->stopmsg(4020007,$totpsecret);
+            $nscore->msg->stopmsg(4040007,$totpsecret);
         }
         return $isok; //bool
     }
@@ -206,10 +206,10 @@ class nyasfunc {
             } else if ($datacount == 1) { //是
                 $isok = true;
             } else { //错
-                $nscore->msg->stopmsg(4020008,$totpsecret);
+                $nscore->msg->stopmsg(4040008,$totpsecret);
             }
         } else { //无=错
-            $nscore->msg->stopmsg(4020009,$totpsecret);
+            $nscore->msg->stopmsg(4040009,$totpsecret);
         }
         return $isok; //bool
     }
@@ -238,10 +238,10 @@ class nyasfunc {
             } else if ($datacount == 1) { //是
                 $isok = true;
             } else { //错
-                $nscore->msg->stopmsg(4020010,$totpsecret);
+                $nscore->msg->stopmsg(4040010,$totpsecret);
             }
         } else { //无=错
-            $nscore->msg->stopmsg(4020011,$totpsecret);
+            $nscore->msg->stopmsg(4040011,$totpsecret);
         }
         return $isok; //bool
     }
@@ -270,10 +270,10 @@ class nyasfunc {
             } else if ($datacount == 1) { //是
                 $isok = true;
             } else { //错
-                $nscore->msg->stopmsg(4020012,$totpsecret);
+                $nscore->msg->stopmsg(4040012,$totpsecret);
             }
         } else { //无=错
-            $nscore->msg->stopmsg(4020013,$totpsecret);
+            $nscore->msg->stopmsg(4040013,$totpsecret);
         }
         return $isok; //bool
     }
@@ -298,9 +298,10 @@ class nyasfunc {
             }
         } else if ($dbreturn[0] == 1010001) { //无，不操作
         } else { //错
-            $nscore->msg->stopmsg(4020014,$totpsecret);
+            $nscore->msg->stopmsg(4040014,$totpsecret);
         }
         return $userhashs;
+        // ["HqrJHc4bLwe444ja73RQop4HsqsUEiyCaQpxAszYc9Lsj13CYjIU0Dzx3KpBujsi","vHqw1uq4XaXyz4IbdC4gfB441886l25Zt4TDB6YNHhDlu27uHZGg3IW8Zb1BegQm"]
     }
 
     //修改社交关系
@@ -314,10 +315,10 @@ class nyasfunc {
     function i_follow_f($me,$who,$totpsecret=null) {
         global $nlcore; global $nscore;
         if ($this->h_ban_i($me,$who)) { //被对方拉黑
-            $nscore->msg->stopmsg(4020108,$totpsecret);
+            $nscore->msg->stopmsg(4040108,$totpsecret);
         }
         if ($this->i_ban_h($me,$who)) { //将对方拉黑
-            $nscore->msg->stopmsg(4020109,$totpsecret);
+            $nscore->msg->stopmsg(4040109,$totpsecret);
         }
         // INSERT INTO z1_follow(fuser, tuser) VALUES ('I','W')
         $tableStr = $nscore->cfg->tables["follow"];
@@ -327,7 +328,7 @@ class nyasfunc {
         ];
         $dbreturn = $nlcore->db->insert($tableStr,$insertDic);
         if ($dbreturn[0] >= 2000000) { //错
-            $nscore->msg->stopmsg(4020100,$totpsecret);
+            $nscore->msg->stopmsg(4040100,$totpsecret);
         } else if ($dbreturn[3] == 0) { //重复操作，不操作
         }
         // UPDATE z1_follow SET friend=1 WHERE fuser='W' AND `tuser`='I'
@@ -340,7 +341,7 @@ class nyasfunc {
         ];
         $dbreturn = $nlcore->db->update($updateDic,$tableStr,$whereDic);
         if ($dbreturn[0] >= 2000000 || $dbreturn[3] > 1) { //错
-            $nscore->msg->stopmsg(4020101,$totpsecret);
+            $nscore->msg->stopmsg(4040101,$totpsecret);
         }
         if ($dbreturn[3] == 1) {
             // UPDATE z1_follow SET friend=1 WHERE fuser='I' AND `tuser`='W'
@@ -353,7 +354,7 @@ class nyasfunc {
             ];
             $dbreturn = $nlcore->db->update($updateDic,$tableStr,$whereDic);
             if ($dbreturn[0] >= 2000000 || $dbreturn[3] > 1) { //错
-                $nscore->msg->stopmsg(4020102,$totpsecret);
+                $nscore->msg->stopmsg(4040102,$totpsecret);
             }
         }
     }
@@ -374,7 +375,7 @@ class nyasfunc {
         ];
         $dbreturn = $nlcore->db->delete($tableStr,$whereDic);
         if ($dbreturn[0] >= 2000000) { //错
-            $nscore->msg->stopmsg(4020103,$totpsecret);
+            $nscore->msg->stopmsg(4040103,$totpsecret);
         } else if ($dbreturn[3] != 1) { //重复操作，不报错
         }
         // UPDATE z1_follow SET friend=0 WHERE fuser='W' AND `tuser`='I'
@@ -387,7 +388,7 @@ class nyasfunc {
         ];
         $dbreturn = $nlcore->db->update($updateDic,$tableStr,$whereDic);
         if ($dbreturn[0] >= 2000000) { //错
-            $nscore->msg->stopmsg(4020104,$totpsecret);
+            $nscore->msg->stopmsg(4040104,$totpsecret);
         } else if ($dbreturn[3] == 0) { //重复操作，不报错
         }
     }
@@ -401,7 +402,7 @@ class nyasfunc {
     function i_ban_f($me,$who,$totpsecret=null) {
         global $nlcore; global $nscore;
         if ($this->i_ban_h($me,$who)) {
-            $nscore->msg->stopmsg(4020110,$totpsecret);
+            $nscore->msg->stopmsg(4040110,$totpsecret);
         }
         // INSERT INTO z1_ban(fuser, tuser) VALUES ('I','W')
         $tableStr = $nscore->cfg->tables["ban"];
@@ -411,7 +412,7 @@ class nyasfunc {
         ];
         $dbreturn = $nlcore->db->insert($tableStr,$insertDic);
         if ($dbreturn[0] >= 2000000) { //错
-            $nscore->msg->stopmsg(4020105,$totpsecret);
+            $nscore->msg->stopmsg(4040105,$totpsecret);
         } else if ($dbreturn[3] == 0) { //重复操作，不报错
         }
         // DELETE FROM z1_follow WHERE (fuser='I' or tuser='I') AND (fuser='W' or tuser='W')
@@ -419,7 +420,7 @@ class nyasfunc {
         $customWhere = "(fuser = '".$me."' or tuser = '".$me."') AND (fuser = '".$who."' or tuser = '".$who."')";
         $dbreturn = $nlcore->db->delete($tableStr,[],$customWhere);
         if ($dbreturn[0] >= 2000000) { //错
-            $nscore->msg->stopmsg(4020106,$totpsecret);
+            $nscore->msg->stopmsg(4040106,$totpsecret);
         } else if ($dbreturn[3] == 0) { //重复操作，不报错
         }
     }
@@ -440,7 +441,7 @@ class nyasfunc {
         ];
         $dbreturn = $nlcore->db->delete($tableStr,$whereDic);
         if ($dbreturn[0] >= 2000000) { //错
-            $nscore->msg->stopmsg(4020107,$totpsecret);
+            $nscore->msg->stopmsg(4040107,$totpsecret);
         } else if ($dbreturn[3] != 1) { //重复操作，不报错
         }
     }

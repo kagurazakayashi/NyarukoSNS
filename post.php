@@ -5,10 +5,10 @@
 */
 $phpfiledir = pathinfo(__FILE__)["dirname"].DIRECTORY_SEPARATOR;
 $usersrc = $phpfiledir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPARATOR."src".DIRECTORY_SEPARATOR;
-require_once $phpfiledir."nyascore.class.php";
+require_once $phpfiledir."nyscore.class.php";
 require_once $usersrc."nyacore.class.php";
-class addpost {
-    function add():void {
+class post {
+    function init():void {
         global $nlcore;
         global $nscore;
         $jsonarrTotpsecret = $nlcore->safe->decryptargv($nscore->cfg->limittime["post"]);
@@ -105,7 +105,7 @@ class addpost {
             if ($files) {
                 $filesarr = explode(",",$jsonarr["files"]);
                 foreach ($filesarr as $nowfile) {
-                    if (!preg_match("/[\w\/]*[\d]{11}_[\w]{32}/",$nowfile)) {
+                    if (!$nlcore->safe->ismediafilename($nowfile)) {
                         $nscore->msg->stopmsg(4010200,$totpsecret,$nowfile);
                     }
                 }
@@ -121,7 +121,7 @@ class addpost {
         $contentlen = strlen($content);
         if ($contentlen == 0 && !$files && !$cite) $nscore->msg->stopmsg(4010000,$totpsecret);
         $banwords = $nlcore->safe->wordfilter($content,true,$totpsecret);
-        if ($banwords[0] == true) $nscore->msg->stopmsg(2020300,$totpsecret,"content");
+        if ($banwords[0] == true) $nlcore->msg->stopmsg(2020300,$totpsecret,"content");
         // 檢查提及是否在正文中,並轉換成用戶哈希字符串
         $mention = (isset($jsonarr["mention"]) && strlen($jsonarr["mention"]) > 5) ? $jsonarr["mention"] : null;
         if ($mention) {
@@ -155,10 +155,10 @@ class addpost {
         // 檢查關閉轉發
         $noforward = isset($jsonarr["noforward"]) ? intval($jsonarr["noforward"]) : 0;
         if (($nocomment != 0 && $nocomment != 1) || ($noforward != 0 && $noforward != 1)) $nscore->msg->stopmsg(4010001,$totpsecret);
-        // 其他標識
+        // 創建隨機哈希
         $posthash = $nlcore->safe->randhash();
-        // 封裝正文
-        $content = addslashes($content);
+        // 过滤正文
+        // $content = addslashes($content);
         if ($cite && $postmode == 0) {
             // 為對方轉發數+1
             $forwardnum = intval($target["forwardnum"]) + 1;
@@ -191,7 +191,7 @@ class addpost {
                 "cite" => $cite
             ];
             $result = $nlcore->db->insert($tableStr,$insertDic);
-            if ($result[0] >= 2000000) $nscore->msg->stopmsg(2040108,$totpsecret);
+            if ($result[0] >= 2000000) $nscore->msg->stopmsg(4010003,$totpsecret);
             $returncode = 3000000;
         } else if ($postmode == 1) {
             // 數據庫操作：修改貼文
@@ -338,5 +338,5 @@ class addpost {
         }
     }
 }
-$addpost = new addpost();
-$addpost->add();
+$post = new post();
+$post->init();
