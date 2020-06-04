@@ -19,10 +19,10 @@ class post {
         $appid = $jsonarrTotpsecret[4];
         // 檢查用戶是否登入
         $usertoken = $jsonarr["token"];
-        $nlcore->safe->is_rhash64($usertoken);
+        if (!$nlcore->safe->is_rhash64($usertoken)) $nlcore->msg->stopmsg(2040402,$totpsecret,"COMM".$usertoken);
         $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpsecret);
         $userhash = $userpwdtimes["userhash"];
-        if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret); //token無效
+        if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret,"POST".$usertoken); //token無效
         // 檢查請求模式
         $postmode = 0; //0发布 1修改 2刪除
         $editpost = null;
