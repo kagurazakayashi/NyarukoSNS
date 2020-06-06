@@ -25,26 +25,29 @@ class comment {
         if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret,"COMM".$usertoken); //token無效
         // 檢查請求模式
         $content = $banwords = $mtype = $files = $post = null;
+        $delcomment = $jsonarr["delcomment"] ?? null;
         $citetype = strtoupper($jsonarr["citetype"] ?? "POST"); //貼文類型
-        // 評論內容
-        $content = $jsonarr["content"] ?? $nscore->msg->stopmsg(4020005,$totpsecret);
-        if (strlen($content) > $nscore->cfg->wordlimit["comment"]) { //字長檢查
-            $nlcore->msg->stopmsg(4020002,$totpsecret);
-        }
-        $banwords = $nlcore->safe->wordfilter($content,true,$totpsecret); //敏感詞檢查
-        if ($banwords[0] == true) $nlcore->msg->stopmsg(2020300,$totpsecret,"content");
-        // 媒體類型
-        $mtype = strtoupper($jsonarr["mtype"] ?? "TEXT");
-        if (!in_array($mtype,["TEXT","IMAGE"])) {
-            $nscore->msg->stopmsg(4020003,$totpsecret);
-        }
-        // 檔案路徑列表
-        $files = (isset($jsonarr["files"]) && strlen($jsonarr["files"]) >= 32) ? $jsonarr["files"] : null;
-        if ($files) {
-            $filesarr = explode(",",$jsonarr["files"]);
-            foreach ($filesarr as $nowfile) {
-                if (!$nlcore->safe->ismediafilename($nowfile)) {
-                    $nscore->msg->stopmsg(4010200,$totpsecret,$nowfile);
+        if (!$delcomment) {
+            // 評論內容
+            $content = $jsonarr["content"] ?? $nscore->msg->stopmsg(4020005,$totpsecret);
+            if (strlen($content) > $nscore->cfg->wordlimit["comment"]) { //字長檢查
+                $nlcore->msg->stopmsg(4020002,$totpsecret);
+            }
+            $banwords = $nlcore->safe->wordfilter($content,true,$totpsecret); //敏感詞檢查
+            if ($banwords[0] == true) $nlcore->msg->stopmsg(2020300,$totpsecret,"content");
+            // 媒體類型
+            $mtype = strtoupper($jsonarr["mtype"] ?? "TEXT");
+            if (!in_array($mtype,["TEXT","IMAGE"])) {
+                $nscore->msg->stopmsg(4020003,$totpsecret);
+            }
+            // 檔案路徑列表
+            $files = (isset($jsonarr["files"]) && strlen($jsonarr["files"]) >= 32) ? $jsonarr["files"] : null;
+            if ($files) {
+                $filesarr = explode(",",$jsonarr["files"]);
+                foreach ($filesarr as $nowfile) {
+                    if (!$nlcore->safe->ismediafilename($nowfile)) {
+                        $nscore->msg->stopmsg(4010200,$totpsecret,$nowfile);
+                    }
                 }
             }
         }
@@ -72,7 +75,20 @@ class comment {
             die($nlcore->safe->encryptargv($returnarr,$totpsecret));
         }
         // 目標 貼文/評論 唯一哈希值
-        $post = (isset($jsonarr["post"]) && $nlcore->safe->is_rhash64($jsonarr["post"])) ? $jsonarr["post"] : $nscore->msg->stopmsg(4020000,$totpsecret);
+        if ($delcomment) {
+            if (!$nlcore->safe->is_rhash64($delcomment)) $nscore->msg->stopmsg(4020003,$totpsecret);
+            $tableStr = $nscore->cfg->tables["comment"];
+            $columnArr = ["post"];
+            $whereDic = ["comment" => $delcomment];
+            $dbreturn = $nlcore->db->select($columnArr,$tableStr,$whereDic);
+            if ($dbreturn[0] == 1010000) {
+                $post = $dbreturn[2][0]["post"];
+            } else {
+                $nscore->msg->stopmsg(4020100,$totpsecret);
+            }
+        } else {
+            $post = (isset($jsonarr["post"]) && $nlcore->safe->is_rhash64($jsonarr["post"])) ? $jsonarr["post"] : $nscore->msg->stopmsg(4020000,$totpsecret);
+        }
         // 評論目標
         $iscomment = false;
         if (strcmp($citetype,"POST") == 0) {
@@ -97,32 +113,51 @@ class comment {
             if ($iscomment) {
                 $post = $dbreturndata["post"]; //評論的評論視為評論貼文
             }
-            $commentnum = intval($dbreturndata["commentnum"]) + 1;
-            $commentmax = intval($dbreturndata["commentmax"]) + 1;
-            $tablecomment = $nscore->cfg->tables["comment"];
-            // 資料庫操作：發表評論
-            $commenthash = $nlcore->safe->randhash();
-            $insertDic = [
-                "comment" => $commenthash,
-                "user" => $userhash,
-                "citetype" => $citetype,
-                "post" => $post,
-                "content" => $content,
-                "type" => $mtype,
-                "files" => $files,
-                "storey" => $commentmax
-            ];
-            $result = $nlcore->db->insert($tablecomment,$insertDic);
-            if ($result[0] >= 2000000) $nscore->msg->stopmsg(4020004,$totpsecret);
+            // 刪除評論
+            if ($delcomment) {
+                $commentnum = intval($dbreturndata["commentnum"]) - 1;
+                if ($commentnum < 0) $commentnum = 0;
+                $tableStr = $nscore->cfg->tables["comment"];
+                $whereDic = [
+                    "comment" => $delcomment,
+                    "post" => $post
+                ];
+                $dbreturn = $nlcore->db->delete($tableStr,$whereDic,"","OR");
+                if ($dbreturn[0] >= 2000000) {
+                    $nscore->msg->stopmsg(4020202,$totpsecret,$nowfile);
+                }
+            } else {
+                $commentnum = intval($dbreturndata["commentnum"]) + 1;
+                $commentmax = intval($dbreturndata["commentmax"]) + 1;
+                $tablecomment = $nscore->cfg->tables["comment"];
+                // 資料庫操作：發表評論
+                $commenthash = $nlcore->safe->randhash();
+                $insertDic = [
+                    "comment" => $commenthash,
+                    "user" => $userhash,
+                    "citetype" => $citetype,
+                    "post" => $post,
+                    "content" => $content,
+                    "type" => $mtype,
+                    "files" => $files,
+                    "storey" => $commentmax
+                ];
+                $result = $nlcore->db->insert($tablecomment,$insertDic);
+                if ($result[0] >= 2000000) $nscore->msg->stopmsg(4020004,$totpsecret);
+            }
             // 更新貼文評論數
             $updateDic = ["commentnum" => $commentnum];
             $okcode = 3000102;
+            if ($delcomment == null) {
+                $updateDic["commentmax"] = $commentmax;
+                $okcode = 3000100;
+            }
             $whereDic = ["post" => $post];
             $result = $nlcore->db->update($updateDic,$tableposts,$whereDic);
             if ($result[0] >= 2000000) $nscore->msg->stopmsg(4020006,$totpsecret);
             // 完成返回
             $returnarr = $nscore->msg->m(0,$okcode);
-            $returnarr["comment"] = $commenthash;
+            $returnarr["comment"] = $commenthash ?? $delcomment;
             echo $nlcore->safe->encryptargv($returnarr,$totpsecret);
         } else if ($dbreturn[0] == 1010001) {
             $nscore->msg->stopmsg(4020001,$totpsecret,$post);
