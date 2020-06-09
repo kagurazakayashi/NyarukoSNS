@@ -8,7 +8,7 @@ f = open("testconfig.json", 'r')
 lines = f.read()
 f.close()
 jsonfiledata = demjson.decode(lines)
-if jsonfiledata["zeze"] == "" or jsonfiledata["token"] == "":
+if jsonfiledata["nys"] == "" or jsonfiledata["token"] == "":
     test_core.terr("错误： 'testconfig.json' 配置不完全。")
     exit()
 uurl = jsonfiledata["nys"]+"post.php"
