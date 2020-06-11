@@ -11,7 +11,7 @@ class timeline {
     function init():void {
         global $nlcore;
         global $nscore;
-        $jsonarrTotpsecret = $nlcore->safe->decryptargv($nscore->cfg->limittime["comment"]);
+        $jsonarrTotpsecret = $nlcore->safe->decryptargv($nscore->cfg->limittime["timeline"]);
         $jsonarr = $jsonarrTotpsecret[0];
         $totpsecret = $jsonarrTotpsecret[1];
         $totptoken = $jsonarrTotpsecret[2];
@@ -30,12 +30,28 @@ class timeline {
         $postsTable = $nscore->cfg->tables["posts"];
         $banTable = $nscore->cfg->tables["ban"];
         $infoTable = $nlcore->cfg->db->tables["info"];
-        $columnArr = ["post","userhash","date","modified","title","type","content","tag","files","share","mention","nocomment","noforward","cite","forwardnum","commentnum","likenum"];
-        $poststbcmd = "";
+        $zinfoTable = $nscore->cfg->tables["info"];
+        $commentTable = $nscore->cfg->tables["comment"];
+        $filenone = ["path"=>""];
+        $selectcmd = "";
+        $columnArrs = [];
+        $columnArr = ["name","image"];
+        $columnArrs = array_merge($columnArrs,$columnArr);
         foreach ($columnArr as $column) {
-            $poststbcmd .= ",`".$postsTable."`.`".$column."`";
+            $f = (strlen($selectcmd) == 0) ? "" : ",";
+            $selectcmd .= $f."`".$infoTable."`.`".$column."`";
         }
-        $sqlcmd = "SELECT `".$infoTable."`.`name`,`".$infoTable."`.`image`".$poststbcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` WHERE `".$postsTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
+        $columnArr = ["ext*"]; //需要的擴展用戶資料
+        $columnArrs = array_merge($columnArrs,$columnArr);
+        foreach ($columnArr as $column) {
+            $selectcmd .= ",`".$zinfoTable."`.`".$column."`";
+        }
+        $columnArr = ["post","userhash","date","modified","title","type","content","tag","files","share","mention","nocomment","noforward","cite","forwardnum","commentnum","likenum"];
+        $columnArrs = array_merge($columnArrs,$columnArr);
+        foreach ($columnArr as $column) {
+            $selectcmd .= ",`".$postsTable."`.`".$column."`";
+        }
+        $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
         $dbreturn = $nlcore->db->sqlc($sqlcmd);
         $returnarr = $nscore->msg->m(0,3000200);
         if ($dbreturn[0] == 1010000) {
@@ -46,22 +62,45 @@ class timeline {
                 $post = $postitem["post"];
                 array_push($posthashs,$post);
                 // 補充檔案訊息
-                $postitem["files"] = strlen($postitem["files"]) > 1 ? $nlcore->func->imagesurl($postitem["files"]) : ["path"=>""];
-                $postitem["image"] = strlen($postitem["image"]) > 1 ? $nlcore->func->imagesurl($postitem["image"]) : ["path"=>""];
+                $postitem["files"] = strlen($postitem["files"]) > 1 ? $nlcore->func->imagesurl($postitem["files"],$filenone) : [$filenone];
+                $postitem["image"] = strlen($postitem["image"]) > 1 ? $nlcore->func->imagesurl($postitem["image"],$filenone) : [$filenone];
                 $postlist[$i] = $postitem;
+                // 校驗資料庫取出資訊完整性
+                foreach ($columnArrs as $column) {
+                    if (!in_array($column,array_keys($postitem))) {
+                        $nscore->msg->stopmsg(4010700,$totpsecret,$column);
+                    }
+                }
             }
             // 批量取得評論
+            $columnArrs = [];
+            $selectcmd = "";
+            $columnArr = ["name"];
+            $columnArrs = array_merge($columnArrs,$columnArr);
+            foreach ($columnArr as $column) {
+                $f = (strlen($selectcmd) == 0) ? "" : ",";
+                $selectcmd .= $f."`".$infoTable."`.`".$column."`";
+            }
+            $columnArr = ["ext*"]; //需要的擴展用戶資料
+            $columnArrs = array_merge($columnArrs,$columnArr);
+            foreach ($columnArr as $column) {
+                $selectcmd .= ",`".$zinfoTable."`.`".$column."`";
+            }
             $columnArr = ["post","comment","userhash","date","modified","content","type","files","likenum","storey","commentnum"];
-            $tableStr = $nscore->cfg->tables["comment"];
-            $whereDic = ["post" => $posthashs];
-            $dbreturn = $nlcore->db->select($columnArr,$tableStr,$whereDic,$customWhere="",$whereMode="IN");
+            $columnArrs = array_merge($columnArrs,$columnArr);
+            foreach ($columnArr as $column) {
+                $selectcmd .= ",`".$commentTable."`.`".$column."`";
+            }
+            $posthashcmd = implode("','", $posthashs);
+            $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE `".$commentTable."`.`post` IN ('".$posthashcmd."') AND `".$infoTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."');";
+            $dbreturn = $nlcore->db->sqlc($sqlcmd);
             if ($dbreturn[0] == 1010000) {
                 $commarr = $dbreturn[2];
                 for ($j=0; $j < count($commarr); $j++) {
                     $commitem = $commarr[$j];
                     $topost = $commitem["post"];
                     unset($commitem["post"]);
-                    $commitem["files"] = strlen($commitem["files"]) > 1 ? $nlcore->func->imagesurl($commitem["files"]) : [];
+                    $commitem["files"] = strlen($commitem["files"]) > 1 ? $nlcore->func->imagesurl($commitem["files"],$filenone) : $filenone;
                     for ($k=0; $k < count($postlist); $k++) {
                         $post = $postlist[$k]["post"];
                         if (strcmp($post,$topost) == 0) {

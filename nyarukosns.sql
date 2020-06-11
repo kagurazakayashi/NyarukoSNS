@@ -35,10 +35,10 @@ CREATE TABLE `s1_ban` (
 CREATE TABLE `s1_comment` (
   `id` bigint UNSIGNED NOT NULL COMMENT '序号',
   `comment` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '评论唯一哈希',
-  `user` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '发布用户哈希',
+  `userhash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '发布用户哈希',
   `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发表日期',
   `modified` datetime DEFAULT NULL COMMENT '修改日期',
-  `citetype` enum('POST','COMM') CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL DEFAULT 'POST' COMMENT '被评论的内容类型',
+  `citetype` enum('POST','COMM','COMM2') CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL DEFAULT 'POST' COMMENT '被评论的内容类型',
   `post` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '被评论的贴文或评论',
   `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT '评论内容',
   `type` enum('TEXT','IMAGE') CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL DEFAULT 'TEXT' COMMENT '评论类型',
@@ -63,6 +63,20 @@ CREATE TABLE `s1_follow` (
   `friend` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否为双向',
   `timeout` datetime DEFAULT NULL COMMENT '有效期至'
 ) ENGINE=InnoDB DEFAULT CHARSET=ascii COLLATE=ascii_bin COMMENT='关注表';
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `s1_info`
+--
+
+CREATE TABLE `s1_info` (
+  `id` int UNSIGNED NOT NULL COMMENT '序号',
+  `userhash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '用户哈希',
+  `following` int UNSIGNED NOT NULL COMMENT '关注数',
+  `followers` int UNSIGNED NOT NULL COMMENT '粉丝数',
+  `postnum` int UNSIGNED NOT NULL COMMENT '发帖数'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
 
 -- --------------------------------------------------------
 
@@ -100,7 +114,7 @@ CREATE TABLE `s1_like` (
 CREATE TABLE `s1_posts` (
   `id` bigint UNSIGNED NOT NULL COMMENT '序号',
   `post` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '贴文哈希值',
-  `user` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '用户哈希值',
+  `userhash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '用户哈希值',
   `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发表日期',
   `modified` datetime DEFAULT NULL COMMENT '修改日期',
   `title` tinytext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci COMMENT '文章标题',
@@ -159,6 +173,12 @@ ALTER TABLE `s1_follow`
   ADD PRIMARY KEY (`id`);
 
 --
+-- 表的索引 `s1_info`
+--
+ALTER TABLE `s1_info`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- 表的索引 `s1_like`
 --
 ALTER TABLE `s1_like`
@@ -196,6 +216,12 @@ ALTER TABLE `s1_comment`
 -- 使用表AUTO_INCREMENT `s1_follow`
 --
 ALTER TABLE `s1_follow`
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '序号';
+
+--
+-- 使用表AUTO_INCREMENT `s1_info`
+--
+ALTER TABLE `s1_info`
   MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '序号';
 
 --
