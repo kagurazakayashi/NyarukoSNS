@@ -26,7 +26,7 @@ class commentlist {
         // 導入提交的參數
         $limst = isset($jsonarr["limst"]) ? intval($jsonarr["limst"]) : 0;
         $offset = isset($jsonarr["offset"]) ? intval($jsonarr["offset"]) : 10;
-        if (!isset($jsonarr["post"]) || !$nlcore->safe->is_rhash64($usertoken)) $nlcore->msg->stopmsg(4020301,$totpsecret,"COMM".$usertoken);
+        if (!isset($jsonarr["post"])) $zecore->msg->stopmsg(4020301,$totpsecret);
         $post = $jsonarr["post"];
         // 讀取評論列表
         $postsTable = $nscore->cfg->tables["posts"];
