@@ -19,10 +19,20 @@ class post {
         $appid = $jsonarrTotpsecret[4];
         // 檢查用戶是否登入
         $usertoken = $jsonarr["token"];
-        if (!$nlcore->safe->is_rhash64($usertoken)) $nlcore->msg->stopmsg(2040402,$totpsecret,"COMM".$usertoken);
+        if (!$nlcore->safe->is_rhash64($usertoken)) $nlcore->msg->stopmsg(2040402,$totpsecret,"T-".$usertoken);
         $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpsecret);
         $userhash = $userpwdtimes["userhash"];
-        if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret,"POST".$usertoken); //token無效
+        if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret,"T-".$usertoken); //token無效
+        // 檢查使用哪個使用者操作
+        if (isset($jsonarr["userhash"])) {
+            $subuser = $jsonarr["userhash"];
+            if (strcmp($userhash,$subuser) != 0) {
+                if (!$nlcore->safe->is_rhash64($subuser)) $nlcore->msg->stopmsg(2070003,$totpsecret,"S-".$subuser);
+                $issub = $nlcore->func->issubaccount($userhash,$subuser)[0];
+                if ($issub == false) $nlcore->msg->stopmsg(2070004,$totpsecret,"S-".$subuser);
+                $userhash = $subuser;
+            }
+        }
         // 檢查請求模式
         $postmode = 0; //0发布 1修改 2刪除
         $editpost = null;
