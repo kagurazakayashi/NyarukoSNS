@@ -138,7 +138,7 @@ class post {
             $mention = explode(",",$jsonarr["mention"]);
             for ($i=0; $i < count($mention); $i++) {
                 $nowmention = $mention[$i];
-                $namearr = explode("#",$nowmention);
+                $namearr = explode($zecore->cfg->separator["namelink"],$nowmention);
                 $name = $namearr[0];
                 if (strstr($content, $name) == false) {
                     $nscore->msg->stopmsg(4010101,$totpsecret,$content);
