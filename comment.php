@@ -74,7 +74,7 @@ class comment {
             ];
             $whereDic = [
                 "comment" => $jsonarr["editcomment"],
-                "user" => $userhash
+                "userhash" => $userhash
             ];
             $result = $nlcore->db->update($updateDic,$tableStr,$whereDic);
             if ($result[0] >= 2000000) $nscore->msg->stopmsg(4010503,$totpsecret);
@@ -142,7 +142,7 @@ class comment {
                 $commenthash = $nlcore->safe->randhash();
                 $insertDic = [
                     "comment" => $commenthash,
-                    "user" => $userhash,
+                    "userhash" => $userhash,
                     "citetype" => $citetype,
                     "post" => $post,
                     "content" => $content,

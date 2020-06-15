@@ -92,7 +92,8 @@ class timeline {
                 $selectcmd .= ",`".$commentTable."`.`".$column."`";
             }
             $posthashcmd = implode("','", $posthashs);
-            $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE `".$commentTable."`.`post` IN ('".$posthashcmd."') AND `".$infoTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."');";
+            // 取按日期排列的前三條資料
+            $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE `".$commentTable."`.`post` IN ('".$posthashcmd."') AND `".$infoTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC;";
             $dbreturn = $nlcore->db->sqlc($sqlcmd);
             if ($dbreturn[0] == 1010000) {
                 $commarr = $dbreturn[2];
