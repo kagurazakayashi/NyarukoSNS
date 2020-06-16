@@ -19,9 +19,6 @@ $tableStr = $nscore->cfg->tables["info"];
 $insertDic = [
     "userhash" => $returnArray["userhash"],
 ];
-if (isset($jsonarr["race"])) {
-    $insertDic["race"] = intval($jsonarr["race"]);
-}
 $dbreturn = $nlcore->db->insert($tableStr,$insertDic);
 if ($dbreturn[0] >= 2000000) $nscore->msg->stopmsg(4050000,$totpsecret);
 // 將執行結果 JSON 返回到客戶端

@@ -41,7 +41,7 @@ class timeline {
             $f = (strlen($selectcmd) == 0) ? "" : ",";
             $selectcmd .= $f."`".$infoTable."`.`".$column."`";
         }
-        $columnArr = ["ext*"]; //需要的擴展用戶資料
+        $columnArr = []; //需要的擴展用戶資料
         $columnArrs = array_merge($columnArrs,$columnArr);
         foreach ($columnArr as $column) {
             $selectcmd .= ",`".$zinfoTable."`.`".$column."`";
@@ -57,14 +57,14 @@ class timeline {
         if ($dbreturn[0] == 1010000) {
             $postlist = $dbreturn[2];
             $posthashs = [];
-            for ($i=0; $i < count($postlist); $i++) {
-                $postitem = $postlist[$i];
+            for ($postlisti=0; $postlisti < count($postlist); $postlisti++) {
+                $postitem = $postlist[$postlisti];
                 $post = $postitem["post"];
                 array_push($posthashs,$post);
                 // 補充檔案訊息
                 $postitem["files"] = strlen($postitem["files"]) > 1 ? $nlcore->func->imagesurl($postitem["files"],$filenone) : [$filenone];
                 $postitem["image"] = strlen($postitem["image"]) > 1 ? $nlcore->func->imagesurl($postitem["image"],$filenone) : [$filenone];
-                $postlist[$i] = $postitem;
+                $postlist[$postlisti] = $postitem;
                 // 校驗資料庫取出資訊完整性
                 foreach ($columnArrs as $column) {
                     if (!in_array($column,array_keys($postitem))) {
@@ -73,50 +73,57 @@ class timeline {
                 }
             }
             // 批量取得評論
-            $columnArrs = [];
-            $selectcmd = "";
-            $columnArr = ["name"];
-            $columnArrs = array_merge($columnArrs,$columnArr);
-            foreach ($columnArr as $column) {
-                $f = (strlen($selectcmd) == 0) ? "" : ",";
-                $selectcmd .= $f."`".$infoTable."`.`".$column."`";
-            }
-            $columnArr = ["ext*"]; //需要的擴展用戶資料
-            $columnArrs = array_merge($columnArrs,$columnArr);
-            foreach ($columnArr as $column) {
-                $selectcmd .= ",`".$zinfoTable."`.`".$column."`";
-            }
-            $columnArr = ["post","comment","userhash","date","modified","content","type","files","likenum","storey","commentnum"];
-            $columnArrs = array_merge($columnArrs,$columnArr);
-            foreach ($columnArr as $column) {
-                $selectcmd .= ",`".$commentTable."`.`".$column."`";
-            }
-            $posthashcmd = implode("','", $posthashs);
-            // 取按日期排列的前三條資料
-            $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE `".$commentTable."`.`post` IN ('".$posthashcmd."') AND `".$infoTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC;";
-            $dbreturn = $nlcore->db->sqlc($sqlcmd);
-            if ($dbreturn[0] == 1010000) {
-                $commarr = $dbreturn[2];
-                for ($j=0; $j < count($commarr); $j++) {
-                    $commitem = $commarr[$j];
-                    $topost = $commitem["post"];
-                    unset($commitem["post"]);
-                    $commitem["files"] = strlen($commitem["files"]) > 1 ? $nlcore->func->imagesurl($commitem["files"],$filenone) : $filenone;
-                    for ($k=0; $k < count($postlist); $k++) {
-                        $post = $postlist[$k]["post"];
-                        if (strcmp($post,$topost) == 0) {
-                            $npost = $postlist[$k];
-                            $commentarr = $npost["comment"] ?? [];
-                            array_push($commentarr,$commitem);
-                            $npost["comment"] = $commentarr;
-                            $postlist[$k] = $npost;
-                        }
-                    }
-                    $commarr[$j] = $commitem;
+            $timelinecommnum = $nscore->cfg->timelinecommnum;
+            if ($timelinecommnum > 0) {
+                $columnArrs = [];
+                $selectcmd = "";
+                $columnArr = ["name"];
+                $columnArrs = array_merge($columnArrs,$columnArr);
+                foreach ($columnArr as $column) {
+                    $f = (strlen($selectcmd) == 0) ? "" : ",";
+                    $selectcmd .= $f."`".$infoTable."`.`".$column."`";
                 }
-            } else if ($dbreturn[0] == 1010001) {
-            } else {
-                $nscore->msg->stopmsg(4020300,$totpsecret);
+                $columnArr = []; //需要的擴展用戶資料
+                $columnArrs = array_merge($columnArrs,$columnArr);
+                foreach ($columnArr as $column) {
+                    $selectcmd .= ",`".$zinfoTable."`.`".$column."`";
+                }
+                $columnArr = ["post","comment","userhash","date","modified","content","type","files","likenum","storey","commentnum"];
+                $columnArrs = array_merge($columnArrs,$columnArr);
+                foreach ($columnArr as $column) {
+                    $selectcmd .= ",`".$commentTable."`.`".$column."`";
+                }
+                // 準備集中查詢，合併語句
+                for ($posthashsi=0; $posthashsi < count($posthashs); $posthashsi++) {
+                    $posthashs[$posthashsi] = "`".$commentTable."`.`id` IN (SELECT cid.`id` FROM (SELECT * FROM `".$commentTable."` WHERE `".$commentTable."`.`post` = '".$posthashs[$posthashsi]."' ORDER BY date DESC LIMIT ".$timelinecommnum.") AS cid)";
+                }
+                $posthashcmd = implode(" OR ", $posthashs);
+                // 集中獲取按日期排序的每條貼文的前三條評論
+                $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE (".$posthashcmd.") AND `".$infoTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC;";
+                $dbreturn = $nlcore->db->sqlc($sqlcmd);
+                if ($dbreturn[0] == 1010000) {
+                    $commarr = $dbreturn[2];
+                    for ($commarri=0; $commarri < count($commarr); $commarri++) {
+                        $commitem = $commarr[$commarri];
+                        $topost = $commitem["post"];
+                        unset($commitem["post"]);
+                        $commitem["files"] = strlen($commitem["files"]) > 1 ? $nlcore->func->imagesurl($commitem["files"],$filenone) : $filenone;
+                        for ($postlisti=0; $postlisti < count($postlist); $postlisti++) {
+                            $post = $postlist[$postlisti]["post"];
+                            if (strcmp($post,$topost) == 0) {
+                                $npost = $postlist[$postlisti];
+                                $commentarr = $npost["comment"] ?? [];
+                                array_push($commentarr,$commitem);
+                                $npost["comment"] = $commentarr;
+                                $postlist[$postlisti] = $npost;
+                            }
+                        }
+                        $commarr[$commarri] = $commitem;
+                    }
+                } else if ($dbreturn[0] == 1010001) {
+                } else {
+                    $nscore->msg->stopmsg(4020300,$totpsecret);
+                }
             }
             $returnarr["tl"] = $postlist;
         } else if ($dbreturn[0] == 1010001) {

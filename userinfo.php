@@ -76,8 +76,7 @@ function userinfo($totpsecret,$userhash) {
         [$infoTable,"background"],
         [$zinfoTable,"following"],
         [$zinfoTable,"followers"],
-        [$zinfoTable,"postnum"],
-        [$zinfoTable,"race"]
+        [$zinfoTable,"postnum"]
     ];
     $tableStr = "`".$infoTable."` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash`";
     $whereDic = ["u1_info.userhash" => $userhash];

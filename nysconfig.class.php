@@ -29,5 +29,7 @@ class nyssetting {
         "mention" => "@", //提及某人，常用符號爲「@」，例如「@神楽坂雅詩」。
         "hashtag" => "#" //話題起始符，常用符號爲「#」，例如「#猫猫」。
     ];
+    // 主頁每個貼文顯示多少條評論
+    var $timelinecommnum = 3;
 }
 ?>
