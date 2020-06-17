@@ -51,9 +51,11 @@ class timeline {
         foreach ($columnArr as $column) {
             $selectcmd .= ",`".$postsTable."`.`".$column."`";
         }
+        // 查詢貼文列表
         $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
         $dbreturn = $nlcore->db->sqlc($sqlcmd);
         $returnarr = $nscore->msg->m(0,3000200);
+        $citehashs = [];
         if ($dbreturn[0] == 1010000) {
             $postlist = $dbreturn[2];
             $posthashs = [];
@@ -61,6 +63,8 @@ class timeline {
                 $postitem = $postlist[$postlisti];
                 $post = $postitem["post"];
                 array_push($posthashs,$post);
+                $cite = $postitem["cite"];
+                if ($cite) array_push($citehashs,$cite);
                 // 補充檔案訊息
                 $postitem["files"] = strlen($postitem["files"]) > 1 ? $nlcore->func->imagesurl($postitem["files"],$filenone) : [$filenone];
                 $postitem["image"] = strlen($postitem["image"]) > 1 ? $nlcore->func->imagesurl($postitem["image"],$filenone) : [$filenone];
@@ -72,6 +76,12 @@ class timeline {
                     }
                 }
             }
+            // 批量取得轉發貼文詳情
+            $citehashcmd = implode("','", $citehashs);
+            $citearr = [];
+            $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`post` IN ('".$citehashcmd."') AND`".$postsTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
+            $dbreturcite = $nlcore->db->sqlc($sqlcmd);
+            if ($dbreturn[0] >= 2000000) $nscore->msg->stopmsg(4010404,$totpsecret);
             // 批量取得評論
             $timelinecommnum = $nscore->cfg->timelinecommnum;
             if ($timelinecommnum > 0) {
@@ -101,24 +111,49 @@ class timeline {
                 // 集中獲取按日期排序的每條貼文的前三條評論
                 $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE (".$posthashcmd.") AND `".$infoTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC;";
                 $dbreturn = $nlcore->db->sqlc($sqlcmd);
-                if ($dbreturn[0] == 1010000) {
+                if ($dbreturn[0] == 1010000 || $dbreturcite[0] == 1010000) {
                     $commarr = $dbreturn[2];
-                    for ($commarri=0; $commarri < count($commarr); $commarri++) {
-                        $commitem = $commarr[$commarri];
-                        $topost = $commitem["post"];
-                        unset($commitem["post"]);
-                        $commitem["files"] = strlen($commitem["files"]) > 1 ? $nlcore->func->imagesurl($commitem["files"],$filenone) : $filenone;
-                        for ($postlisti=0; $postlisti < count($postlist); $postlisti++) {
-                            $post = $postlist[$postlisti]["post"];
-                            if (strcmp($post,$topost) == 0) {
-                                $npost = $postlist[$postlisti];
-                                $commentarr = $npost["comment"] ?? [];
-                                array_push($commentarr,$commitem);
-                                $npost["comment"] = $commentarr;
-                                $postlist[$postlisti] = $npost;
+                    $citearr = $dbreturcite[2];
+                    for ($posti=0; $posti < count($postlist); $posti++) {
+                        if ($dbreturn[0] == 1010000) {
+                            $post = $postlist[$posti]["post"];
+                            for ($commarri=0; $commarri < count($commarr); $commarri++) {
+                                $commitem = $commarr[$commarri];
+                                $topost = $commitem["post"];
+                                if (strcmp($post,$topost) == 0) {
+                                    $npost = $postlist[$posti];
+                                    $commentarr = $npost["comment"] ?? [];
+                                    array_push($commentarr,$commitem);
+                                    $npost["comment"] = $commentarr;
+                                    $postlist[$posti] = $npost;
+                                    break;
+                                }
                             }
                         }
-                        $commarr[$commarri] = $commitem;
+                        if ($dbreturcite[0] == 1010000) {
+                            $post = $postlist[$posti]["cite"];
+                            if ($post != null) {
+                                $citearrcount = count($citearr);
+                                for ($citearri=0; $citearri < $citearrcount; $citearri++) {
+                                    $citeitem = $citearr[$citearri];
+                                    $topost = $citeitem["post"];
+                                    if (strcmp($post,$topost) == 0) {
+                                        $npost = $postlist[$posti];
+                                        $citeitem["files"] = strlen($citeitem["files"]) > 1 ? $nlcore->func->imagesurl($citeitem["files"],$filenone) : [$filenone];
+                                        $citeitem["image"] = strlen($citeitem["image"]) > 1 ? $nlcore->func->imagesurl($citeitem["image"],$filenone) : [$filenone];
+                                        $postlist[$postlisti] = $postitem;
+                                        $npost["cite"] = $citeitem;
+                                        $postlist[$posti] = $npost;
+                                        break;
+                                    }
+                                    if ($citearri == $citearrcount-1) {
+                                        $npost = $postlist[$posti];
+                                        $npost["cite"] = ["null"=>""];
+                                        $postlist[$posti] = $npost;
+                                    }
+                                }
+                            }
+                        }
                     }
                 } else if ($dbreturn[0] == 1010001) {
                 } else {
