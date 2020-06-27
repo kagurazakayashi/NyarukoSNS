@@ -17,12 +17,15 @@ class commentlist {
         $totptoken = $jsonarrTotpsecret[2];
         $ipid = $jsonarrTotpsecret[3];
         $appid = $jsonarrTotpsecret[4];
-        // 檢查用戶是否登入
-        $usertoken = $jsonarr["token"];
-        if (!$nlcore->safe->is_rhash64($usertoken)) $nlcore->msg->stopmsg(2040402,$totpsecret,"COMM".$usertoken);
-        $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpsecret);
-        $userhash = $userpwdtimes["userhash"];
-        if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret,"COMM".$usertoken); //token無效
+        // 檢查用戶是否登入，若沒有提供 token 則…算了
+        $userhash = null;
+        if (isset($jsonarr["token"]) && strlen($jsonarr["token"]) > 0) {
+            $usertoken = $jsonarr["token"];
+            if (!$nlcore->safe->is_rhash64($usertoken)) $nlcore->msg->stopmsg(2040402,$totpsecret,"COMM".$usertoken);
+            $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpsecret);
+            $userhash = $userpwdtimes["userhash"];
+            if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret,"COMM".$usertoken);
+        }
         // 導入提交的參數
         $limst = isset($jsonarr["limst"]) ? intval($jsonarr["limst"]) : 0;
         $offset = isset($jsonarr["offset"]) ? intval($jsonarr["offset"]) : 10;
@@ -53,7 +56,8 @@ class commentlist {
         foreach ($columnArr as $column) {
             $selectcmd .= ",`".$commentTable."`.`".$column."`";
         }
-        $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$commentTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') AND `".$commentTable."`.`post`='".$post."' ORDER BY date DESC LIMIT ".$limst.",". $offset.";";
+        $sqlban = $userhash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') " : "";
+        $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$commentTable."`.`userhash` ".$sqlban."AND `".$commentTable."`.`post`='".$post."' ORDER BY date DESC LIMIT ".$limst.",". $offset.";";
         $dbreturn = $nlcore->db->sqlc($sqlcmd);
         $returnarr = $nscore->msg->m(0,3000201);
         if ($dbreturn[0] == 1010000) {

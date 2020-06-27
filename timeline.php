@@ -17,12 +17,15 @@ class timeline {
         $totptoken = $jsonarrTotpsecret[2];
         $ipid = $jsonarrTotpsecret[3];
         $appid = $jsonarrTotpsecret[4];
-        // 檢查用戶是否登入
-        $usertoken = $jsonarr["token"];
-        if (!$nlcore->safe->is_rhash64($usertoken)) $nlcore->msg->stopmsg(2040402,$totpsecret,"COMM".$usertoken);
-        $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpsecret);
-        $userhash = $userpwdtimes["userhash"];
-        if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret,"COMM".$usertoken); //token無效
+        // 檢查用戶是否登入，若沒有提供 token 則…算了
+        $userhash = null;
+        if (isset($jsonarr["token"]) && strlen($jsonarr["token"]) > 0) {
+            $usertoken = $jsonarr["token"];
+            if (!$nlcore->safe->is_rhash64($usertoken)) $nlcore->msg->stopmsg(2040402,$totpsecret,"COMM".$usertoken);
+            $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpsecret);
+            $userhash = $userpwdtimes["userhash"];
+            if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret,"COMM".$usertoken);
+        }
         // 導入提交的參數
         $limst = isset($jsonarr["limst"]) ? intval($jsonarr["limst"]) : 0;
         $offset = isset($jsonarr["offset"]) ? intval($jsonarr["offset"]) : 10;
@@ -51,8 +54,10 @@ class timeline {
         foreach ($columnArr as $column) {
             $selectcmd .= ",`".$postsTable."`.`".$column."`";
         }
+        $sqlcmd = "";
         // 查詢貼文列表
-        $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
+        $sqlban = $userhash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') " : "";
+        $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`userhash` ".$sqlban."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
         $dbreturn = $nlcore->db->sqlc($sqlcmd);
         $returnarr = $nscore->msg->m(0,3000200);
         $citehashs = [];
@@ -79,7 +84,8 @@ class timeline {
             // 批量取得轉發貼文詳情
             $citehashcmd = implode("','", $citehashs);
             $citearr = [];
-            $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`post` IN ('".$citehashcmd."') AND`".$postsTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
+            $sqlban = $userhash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') " : "";
+            $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`post` IN ('".$citehashcmd."') AND`".$postsTable."`.`userhash` ".$sqlban."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
             $dbreturcite = $nlcore->db->sqlc($sqlcmd);
             if ($dbreturn[0] >= 2000000) $nscore->msg->stopmsg(4010404,$totpsecret);
             // 批量取得評論
@@ -109,7 +115,8 @@ class timeline {
                 }
                 $posthashcmd = implode(" OR ", $posthashs);
                 // 集中獲取按日期排序的每條貼文的前三條評論
-                $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE (".$posthashcmd.") AND `".$infoTable."`.`userhash` NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') ORDER BY date DESC;";
+                $sqlban = $userhash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') " : "";
+                $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE (".$posthashcmd.") AND `".$infoTable."`.`userhash` ".$sqlban."ORDER BY date DESC;";
                 $dbreturn = $nlcore->db->sqlc($sqlcmd);
                 if ($dbreturn[0] == 1010000 || $dbreturcite[0] == 1010000) {
                     $commarr = $dbreturn[2];
