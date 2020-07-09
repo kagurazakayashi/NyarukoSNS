@@ -16,7 +16,8 @@ class nyssetting {
         "post" => [60,30], // 文章
         "comment" => [60,30], // 評論
         "timeline" => [60,30], // 時間線
-        "commentlist" => [60,30] // 評論列表
+        "commentlist" => [60,30], // 評論列表
+        "social" => [60,30] // 修改使用者關係
     ];
     // 字數上限(按字元)
     var $wordlimit = [
