@@ -4,8 +4,6 @@ $usersrc = $phpfiledir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPARATOR."src"
 require_once $phpfiledir."nyscore.class.php";
 require_once $usersrc."nyacore.class.php";
 class nysfunc {
-    public $totpsecret = null;
-
     /**
     * @description: 我关注了哪些人
     * @param String me 我的用户哈希
@@ -29,7 +27,7 @@ class nysfunc {
             $nscore->msg->stopmsg(4040000,$totpsecret);
         }
         return $userhashs;
-        // ["Dl4oGEJoyqf00yPXEbohjWYnsxy4n7dXbaebMmgCVMLbNkn0C9bZqtPi1mkGdjwo","lIvEST0CJPp3LaRQAHqm174iVKD28Eeu4AhwDLRpglRrHwFjZRgODFMprHxYt3Uc"]
+        // ["Dl4oGEJoyqf00yPXEbohjWYZExy4n7dXbaebMmgCVMLbNkn0C9bZqtPi1mkGdjwo","lIvEST0CJPp3LaRQAHqm174iVKD28Eeu4AhwDLRpglRrHwFjZRgODFMprHxYt3Uc"]
     }
 
     /**
@@ -55,7 +53,7 @@ class nysfunc {
             $nscore->msg->stopmsg(4040001,$totpsecret);
         }
         return $userhashs;
-        // ["lIvEST0CJPp3LaRQAHqm174iVKD28Eeu4AhwDLRpglRrHwFjZRgODFMprHxYt3Uc","Dl4oGEJoyqf00yPXEbohjWYnsxy4n7dXbaebMmgCVMLbNkn0C9bZqtPi1mkGdjwo"]
+        // ["lIvEST0CJPp3LaRQAHqm174iVKD28Eeu4AhwDLRpglRrHwFjZRgODFMprHxYt3Uc","Dl4oGEJoyqf00yPXEbohjWYZExy4n7dXbaebMmgCVMLbNkn0C9bZqtPi1mkGdjwo"]
     }
 
     /**
@@ -307,29 +305,23 @@ class nysfunc {
     //修改社交关系
 
     /**
-    * @description: 关注对方
-    * @param String me 我的用户哈希
-    * @param String who 对方的用户哈希
+    * @description: 關注對方
+    * @param String me 我的使用者雜湊
+    * @param String who 對方的使用者雜湊
     * @param String totpsecret 加密用secret
+    * @return Bool 是否已經關注了
     */
-    function i_follow_f($me,$who,$totpsecret=null) {
+    function i_follow_f($me,$who,$totpsecret=null):bool {
         global $nlcore; global $nscore;
-        if ($this->h_ban_i($me,$who)) { //被对方拉黑
+        $tableStr = $nscore->cfg->tables["follow"];
+        if ($this->h_ban_i($me,$who)) { //被對方拉黑
             $nscore->msg->stopmsg(4040108,$totpsecret);
         }
-        if ($this->i_ban_h($me,$who)) { //将对方拉黑
+        if ($this->i_ban_h($me,$who)) { //將對方拉黑
             $nscore->msg->stopmsg(4040109,$totpsecret);
         }
-        // INSERT INTO z1_follow(fuser, tuser) VALUES ('I','W')
-        $tableStr = $nscore->cfg->tables["follow"];
-        $insertDic = [
-            "fuser" => $me,
-            "tuser" => $who,
-        ];
-        $dbreturn = $nlcore->db->insert($tableStr,$insertDic);
-        if ($dbreturn[0] >= 2000000) { //错
-            $nscore->msg->stopmsg(4040100,$totpsecret);
-        } else if ($dbreturn[3] == 0) { //重复操作，不操作
+        if ($this->i_follow_h($me,$who,$totpsecret)) { //是否已經關注了
+            return true;
         }
         // UPDATE z1_follow SET friend=1 WHERE fuser='W' AND `tuser`='I'
         $updateDic = [
@@ -340,43 +332,57 @@ class nysfunc {
             "tuser" => $me
         ];
         $dbreturn = $nlcore->db->update($updateDic,$tableStr,$whereDic);
-        if ($dbreturn[0] >= 2000000 || $dbreturn[3] > 1) { //错
+        if ($dbreturn[0] >= 2000000 || $dbreturn[3] > 1) {
             $nscore->msg->stopmsg(4040101,$totpsecret);
         }
-        if ($dbreturn[3] == 1) {
+        // if ($dbreturn[3] == 1) {
             // UPDATE z1_follow SET friend=1 WHERE fuser='I' AND `tuser`='W'
-            $updateDic = [
-                "friend" => 1
-            ];
-            $whereDic = [
+            $insertDic = [
                 "fuser" => $me,
-                "tuser" => $who
+                "tuser" => $who,
+                "friend" => $dbreturn[3]
             ];
-            $dbreturn = $nlcore->db->update($updateDic,$tableStr,$whereDic);
-            if ($dbreturn[0] >= 2000000 || $dbreturn[3] > 1) { //错
+            $dbreturn = $nlcore->db->insert($tableStr,$insertDic);
+            if ($dbreturn[0] >= 2000000 || $dbreturn[3] > 1) {
                 $nscore->msg->stopmsg(4040102,$totpsecret);
             }
-        }
+        // } else if ($dbreturn[3] == 0) {
+        //     // INSERT INTO z1_follow(fuser, tuser) VALUES ('I','W')
+        //     $insertDic = [
+        //         "fuser" => $me,
+        //         "tuser" => $who,
+        //         "friend" => 0
+        //     ];
+        //     $dbreturn = $nlcore->db->insert($tableStr,$insertDic);
+        //     if ($dbreturn[0] >= 2000000) {
+        //         $nscore->msg->stopmsg(4040100,$totpsecret);
+        //     } else if ($dbreturn[3] == 0) {
+        //     }
+        // }
+        return false;
     }
 
     /**
-    * @description: 取关对方
-    * @param String me 我的用户哈希
-    * @param String who 对方的用户哈希
+    * @description: 取關對方
+    * @param String me 我的使用者雜湊
+    * @param String who 對方的使用者雜湊
     * @param String totpsecret 加密用secret
+    * @return Bool 是否已經取關對方
     */
-    function i_unfollow_f($me,$who,$totpsecret=null) {
+    function i_unfollow_f($me,$who,$totpsecret=null):bool {
         // DELETE FROM z1_follow WHERE fuser='I' AND tuser='W'
         global $nlcore; global $nscore;
+        $notarget = false;
         $tableStr = $nscore->cfg->tables["follow"];
         $whereDic = [
             "fuser" => $me,
             "tuser" => $who
         ];
         $dbreturn = $nlcore->db->delete($tableStr,$whereDic);
-        if ($dbreturn[0] >= 2000000) { //错
+        if ($dbreturn[0] >= 2000000) {
             $nscore->msg->stopmsg(4040103,$totpsecret);
-        } else if ($dbreturn[3] != 1) { //重复操作，不报错
+        } else if ($dbreturn[3] != 1) {
+            $notarget = true;
         }
         // UPDATE z1_follow SET friend=0 WHERE fuser='W' AND `tuser`='I'
         $updateDic = [
@@ -387,10 +393,11 @@ class nysfunc {
             "tuser" => $me
         ];
         $dbreturn = $nlcore->db->update($updateDic,$tableStr,$whereDic);
-        if ($dbreturn[0] >= 2000000) { //错
+        if ($dbreturn[0] >= 2000000) {
             $nscore->msg->stopmsg(4040104,$totpsecret);
-        } else if ($dbreturn[3] == 0) { //重复操作，不报错
+        } else if ($dbreturn[3] == 0) {
         }
+        return $notarget;
     }
 
     /**
@@ -415,9 +422,8 @@ class nysfunc {
             $nscore->msg->stopmsg(4040105,$totpsecret);
         } else if ($dbreturn[3] == 0) { //重复操作，不报错
         }
-        // DELETE FROM z1_follow WHERE (fuser='I' or tuser='I') AND (fuser='W' or tuser='W')
         $tableStr = $nscore->cfg->tables["follow"];
-        $customWhere = "(fuser = '".$me."' or tuser = '".$me."') AND (fuser = '".$who."' or tuser = '".$who."')";
+        $customWhere = "(fuser = '".$me."' AND tuser = '".$who."') OR (fuser = '".$who."' AND tuser = '".$me."')";
         $dbreturn = $nlcore->db->delete($tableStr,[],$customWhere);
         if ($dbreturn[0] >= 2000000) { //错
             $nscore->msg->stopmsg(4040106,$totpsecret);
@@ -444,6 +450,26 @@ class nysfunc {
             $nscore->msg->stopmsg(4040107,$totpsecret);
         } else if ($dbreturn[3] != 1) { //重复操作，不报错
         }
+    }
+
+    /**
+    * @description: 檢查提及（昵称#编号）是否在正文中,並轉換成用戶哈希字符串
+    * @param String me 我的用户哈希
+    * @param String who 对方的用户哈希
+    * @param String totpsecret 加密用secret
+    */
+    function mention() { //TODO:!!!
+        $mention = explode(",",$jsonarr["mention"]);
+        for ($i=0; $i < count($mention); $i++) {
+            $nowmention = $mention[$i];
+            $namearr = explode($nscore->cfg->separator["namelink"],$nowmention);
+            $name = $namearr[0];
+            if (strstr($content, $name) == false) {
+                $nscore->msg->stopmsg(4010101,$totpsecret,$content);
+            }
+            $mention[$i] = $nlcore->func->fullnickname2userhash($namearr,$totpsecret)[2];
+        }
+        $mention = implode(",", $mention);
     }
 }
 ?>
