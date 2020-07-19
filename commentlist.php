@@ -3,34 +3,34 @@
  * @description: 評論列表
  * @package NyarukoSNS
 */
-$phpfiledir = pathinfo(__FILE__)["dirname"].DIRECTORY_SEPARATOR;
-$usersrc = $phpfiledir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPARATOR."src".DIRECTORY_SEPARATOR;
-require_once $phpfiledir."nyscore.class.php";
-require_once $usersrc."nyacore.class.php";
+$phpFileDir = pathinfo(__FILE__)["dirname"].DIRECTORY_SEPARATOR;
+$phpFileUserSrcDir = $phpFileDir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPARATOR."src".DIRECTORY_SEPARATOR;
+require_once $phpFileDir."nyscore.class.php";
+require_once $phpFileUserSrcDir."nyacore.class.php";
 class commentlist {
     function init():void {
         global $nlcore;
         global $nscore;
-        $jsonarrTotpsecret = $nlcore->safe->decryptargv($nscore->cfg->limittime["commentlist"]);
-        $jsonarr = $jsonarrTotpsecret[0];
-        $totpsecret = $jsonarrTotpsecret[1];
-        $totptoken = $jsonarrTotpsecret[2];
-        $ipid = $jsonarrTotpsecret[3];
-        $appid = $jsonarrTotpsecret[4];
+        $clientInformation = $nlcore->safe->decryptargv($nscore->cfg->limittime["commentlist"]);
+        $argReceived = $clientInformation[0];
+        $totpSecret = $clientInformation[1];
+        $totptoken = $clientInformation[2];
+        $ipid = $clientInformation[3];
+        $appid = $clientInformation[4];
         // 檢查用戶是否登入，若沒有提供 token 則…算了
-        $userhash = null;
-        if (isset($jsonarr["token"]) && strlen($jsonarr["token"]) > 0) {
-            $usertoken = $jsonarr["token"];
-            if (!$nlcore->safe->is_rhash64($usertoken)) $nlcore->msg->stopmsg(2040402,$totpsecret,"COMM".$usertoken);
-            $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpsecret);
-            $userhash = $userpwdtimes["userhash"];
-            if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpsecret,"COMM".$usertoken);
+        $userHash = null;
+        if (isset($argReceived["token"]) && strlen($argReceived["token"]) > 0) {
+            $usertoken = $argReceived["token"];
+            if (!$nlcore->safe->is_rhash64($usertoken)) $nlcore->msg->stopmsg(2040402,$totpSecret,"COMM".$usertoken);
+            $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpSecret);
+            $userHash = $userpwdtimes["userhash"];
+            if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpSecret,"COMM".$usertoken);
         }
         // 導入提交的參數
-        $limst = isset($jsonarr["limst"]) ? intval($jsonarr["limst"]) : 0;
-        $offset = isset($jsonarr["offset"]) ? intval($jsonarr["offset"]) : 10;
-        if (!isset($jsonarr["post"])) $zecore->msg->stopmsg(4020301,$totpsecret);
-        $post = $jsonarr["post"];
+        $limst = isset($argReceived["limst"]) ? intval($argReceived["limst"]) : 0;
+        $offset = isset($argReceived["offset"]) ? intval($argReceived["offset"]) : 10;
+        if (!isset($argReceived["post"])) $nscore->msg->stopmsg(4020301,$totpSecret);
+        $post = $argReceived["post"];
         // 讀取評論列表
         $postsTable = $nscore->cfg->tables["posts"];
         $banTable = $nscore->cfg->tables["ban"];
@@ -46,7 +46,7 @@ class commentlist {
             $f = (strlen($selectcmd) == 0) ? "" : ",";
             $selectcmd .= $f."`".$infoTable."`.`".$column."`";
         }
-        $columnArr = ["ext*"]; //需要的擴展用戶資料
+        $columnArr = [""]; //需要的擴展用戶資料
         $columnArrs = array_merge($columnArrs,$columnArr);
         foreach ($columnArr as $column) {
             $selectcmd .= ",`".$zinfoTable."`.`".$column."`";
@@ -56,7 +56,7 @@ class commentlist {
         foreach ($columnArr as $column) {
             $selectcmd .= ",`".$commentTable."`.`".$column."`";
         }
-        $sqlban = $userhash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') " : "";
+        $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
         $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$commentTable."`.`userhash` ".$sqlban."AND `".$commentTable."`.`post`='".$post."' ORDER BY date DESC LIMIT ".$limst.",". $offset.";";
         $dbreturn = $nlcore->db->sqlc($sqlcmd);
         $returnarr = $nscore->msg->m(0,3000201);
@@ -71,7 +71,7 @@ class commentlist {
                 // 校驗資料庫取出資訊完整性
                 foreach ($columnArrs as $column) {
                     if (!in_array($column,array_keys($commitem))) {
-                        $nscore->msg->stopmsg(4020302,$totpsecret,$column);
+                        $nscore->msg->stopmsg(4020302,$totpSecret,$column);
                     }
                 }
             }
@@ -79,9 +79,9 @@ class commentlist {
         } else if ($dbreturn[0] == 1010001) {
             $returnarr["comm"] = [];
         } else {
-            $nscore->msg->stopmsg(4020300,$totpsecret);
+            $nscore->msg->stopmsg(4020300,$totpSecret);
         }
-        echo $nlcore->safe->encryptargv($returnarr,$totpsecret);
+        echo $nlcore->safe->encryptargv($returnarr,$totpSecret);
     }
 }
 $commentlist = new commentlist();

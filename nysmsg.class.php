@@ -9,7 +9,7 @@ class nysmsg {
         DD: 详细错误
         */
         1000000 => "操作成功完成",
-        // A=3 : NYS正常
+        // A=3 : nys正常
         /// A=3\BB=00 : 发表内容
         //// A=3\BB=00\CC=00 : 发帖
         //// A=3\BB=00\CC=00\DD=00 :
@@ -40,7 +40,7 @@ class nysmsg {
         3010002 => "取关成功",
         //// A=3\BB=01\CC=00\DD=03 :
         3010003 => "已经取关",
-        // A=4 : NYS错误
+        // A=4 : nys错误
         /// A=4\BB=00 : 通用
         //// A=4\BB=00\CC=00 : 未知问题
         ///// A=4\BB=00\CC=00\DD=00 :
@@ -237,11 +237,11 @@ class nysmsg {
      * @param String str 附加错误信息
      * @param Bool showmsg 是否显示错误信息（否则直接403）
      */
-    function stopmsg($code=null,$totpsecret=null,$str="",$showmsg=true) {
+    function stopmsg($code=null,$totpSecret=null,$str="",$showmsg=true) {
         if ($code && $showmsg > 0) {
             global $nlcore;
-            $msgmode = $totpsecret ? $totpsecret : 1;
-            $json = $this->m($msgmode,$code,$str,$totpsecret);
+            $msgmode = $totpSecret ? $totpSecret : 1;
+            $json = $this->m($msgmode,$code,$str,$totpSecret);
             header('Content-Type:application/json;charset=utf-8');
             echo $json;
         } else {
