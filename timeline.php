@@ -3,29 +3,24 @@
  * @description: 時間線
  * @package NyarukoSNS
 */
-$phpfiledir = pathinfo(__FILE__)["dirname"].DIRECTORY_SEPARATOR;
-$usersrc = $phpfiledir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPARATOR."src".DIRECTORY_SEPARATOR;
-require_once $phpfiledir."nyscore.class.php";
-require_once $usersrc."nyacore.class.php";
+$phpFileDir = pathinfo(__FILE__)["dirname"].DIRECTORY_SEPARATOR;
+$phpFileUserSrcDir = $phpFileDir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPARATOR."src".DIRECTORY_SEPARATOR;
+require_once $phpFileDir."nyscore.class.php";
+require_once $phpFileUserSrcDir."nyacore.class.php";
 // IP檢查和解密客戶端提交的資訊
-$frequencylimitation = $nscore->cfg->limittime["timeline"];
-$inputInformation = $nlcore->safe->decryptargv("",$frequencylimitation[0],$frequencylimitation[1]);
-$jsonarr = $inputInformation[0];
+$frequencyLimitation = $nscore->cfg->limittime["timeline"];
+$inputInformation = $nlcore->safe->decryptargv("",$frequencyLimitation[0],$frequencyLimitation[1]);
+$argReceived = $inputInformation[0];
 $totpSecret = $inputInformation[1];
-$totptoken = $inputInformation[2];
-$ipid = $inputInformation[3];
-$appid = $inputInformation[4];
 // 檢查用戶是否登入，若沒有提供 token 則…算了
-$userhash = null;
-if (isset($jsonarr["token"]) && strlen($jsonarr["token"]) > 0) {
+$userHash = null;
+if (isset($argReceived["token"]) && strlen($argReceived["token"]) > 0) {
     $sessionInformation = $nlcore->safe->userLogged($inputInformation);
-    // $usertoken = $sessionInformation[0];
-    // $usersessioninfo = $sessionInformation[1];
-    $userhash = $sessionInformation[2];
+    $userHash = $sessionInformation[2];
 }
 // 導入提交的參數
-$limst = isset($jsonarr["limst"]) ? intval($jsonarr["limst"]) : 0;
-$offset = isset($jsonarr["offset"]) ? intval($jsonarr["offset"]) : 10;
+$limst = isset($argReceived["limst"]) ? intval($argReceived["limst"]) : 0;
+$offset = isset($argReceived["offset"]) ? intval($argReceived["offset"]) : 10;
 // 讀取貼文
 $postsTable = $nscore->cfg->tables["posts"];
 $banTable = $nscore->cfg->tables["ban"];
@@ -41,7 +36,7 @@ foreach ($columnArr as $column) {
     $f = (strlen($selectcmd) == 0) ? "" : ",";
     $selectcmd .= $f."`".$infoTable."`.`".$column."`";
 }
-$columnArr = ["race"]; //需要的擴展用戶資料
+$columnArr = [""]; //需要的擴展用戶資料
 $columnArrs = array_merge($columnArrs,$columnArr);
 foreach ($columnArr as $column) {
     $selectcmd .= ",`".$zinfoTable."`.`".$column."`";
@@ -53,7 +48,7 @@ foreach ($columnArr as $column) {
 }
 $sqlcmd = "";
 // 查詢貼文列表
-$sqlban = $userhash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') " : "";
+$sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
 $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`userhash` ".$sqlban."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
 $dbreturn = $nlcore->db->sqlc($sqlcmd);
 $returnarr = $nscore->msg->m(0,3000200);
@@ -81,10 +76,10 @@ if ($dbreturn[0] == 1010000) {
     // 批量取得轉發貼文詳情
     $citehashcmd = implode("','", $citehashs);
     $citearr = [];
-    $sqlban = $userhash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') " : "";
+    $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
     $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`post` IN ('".$citehashcmd."') AND`".$postsTable."`.`userhash` ".$sqlban."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
     $dbreturcite = $nlcore->db->sqlc($sqlcmd);
-    if ($dbreturn[0] >= 2000000) $nscore->msg->stopmsg(4010404,$totpSecret);
+    if ($dbreturcite[0] >= 2000000) $nscore->msg->stopmsg(4010404,$totpSecret);
     // 批量取得評論
     $timelinecommnum = $nscore->cfg->timelinecommnum;
     if ($timelinecommnum > 0) {
@@ -96,7 +91,7 @@ if ($dbreturn[0] == 1010000) {
             $f = (strlen($selectcmd) == 0) ? "" : ",";
             $selectcmd .= $f."`".$infoTable."`.`".$column."`";
         }
-        $columnArr = ["race"]; //需要的擴展用戶資料
+        $columnArr = [""]; //需要的擴展用戶資料
         $columnArrs = array_merge($columnArrs,$columnArr);
         foreach ($columnArr as $column) {
             $selectcmd .= ",`".$zinfoTable."`.`".$column."`";
@@ -112,59 +107,127 @@ if ($dbreturn[0] == 1010000) {
         }
         $posthashcmd = implode(" OR ", $posthashs);
         // 集中獲取按日期排序的每條貼文的前三條評論
-        $sqlban = $userhash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userhash."') " : "";
+        $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
         $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE (".$posthashcmd.") AND `".$infoTable."`.`userhash` ".$sqlban."ORDER BY date DESC;";
         $dbreturn = $nlcore->db->sqlc($sqlcmd);
-        if ($dbreturn[0] == 1010000 || $dbreturcite[0] == 1010000) {
-            $commarr = $dbreturn[2];
-            $citearr = $dbreturcite[2];
-            for ($posti=0; $posti < count($postlist); $posti++) {
+    }
+    // 批量取得已關注狀態
+    $postuserhashs = [];
+    $postuserwhere = [];
+    foreach ($postlist as $post) {
+        $nowuserhash = $post["userhash"];
+        if (!in_array($nowuserhash,$postuserhashs)) {
+            array_push($postuserhashs,$nowuserhash);
+            $nowline = "(`fuser`='".$userHash."' AND `tuser`='".$nowuserhash."')";
+            array_push($postuserwhere,$nowline);
+        }
+    }
+    // 同時處理轉發內容的已關注狀態
+    foreach ($citearr as $post) {
+        $nowuserhash = $post["userhash"];
+        if (!in_array($nowuserhash,$postuserhashs)) {
+            array_push($postuserhashs,$nowuserhash);
+            $nowline = "(`fuser`='".$userHash."' AND `tuser`='".$nowuserhash."')";
+            array_push($postuserwhere,$nowline);
+        }
+    }
+    $customWhere = implode(" OR ", $postuserwhere);
+    $tableStr = $nscore->cfg->tables["follow"];
+    $columnArr = ["tuser","friend"];
+    $dbreturnfollow = $nlcore->db->select($columnArr,$tableStr,[],$customWhere);
+    // 合併關注狀態到貼文陣列
+    if ($dbreturnfollow[0] == 1010000 && $dbreturcite[0] == 1010000) {
+        $citearr = $dbreturcite[2];
+        $citearrcount = count($citearr);
+        for ($citearri=0; $citearri < $citearrcount; $citearri++) {
+            $citeitem = $citearr[$citearri];
+            $citeuserhash = $citeitem["userhash"];
+            $isover = true;
+            foreach ($dbreturnfollow[2] as $userFollowInfo) {
+                $tuser = $userFollowInfo["tuser"];
+                $friend = $userFollowInfo["friend"];
+                if (strcmp($citeuserhash,$tuser) == 0) {
+                    $citeitem["follow"] = intval($friend);
+                    $citearr[$citearri] = $citeitem;
+                    $isover = false;
+                    break;
+                }
+            }
+            if ($isover) {
+                $citeitem["follow"] = -1;
+                $citearr[$citearri] = $citeitem;
+            }
+        }
+    }
+    // 將批量獲取的資料合併到貼文陣列
+    for ($posti=0; $posti < count($postlist); $posti++) {
+        $post = $postlist[$posti];
+        // 合併評論資料到貼文陣列
+        if ($timelinecommnum > 0) {
+            if ($dbreturn[0] == 1010000 || $dbreturcite[0] == 1010000) {
+                $commarr = $dbreturn[2];
                 if ($dbreturn[0] == 1010000) {
-                    $post = $postlist[$posti]["post"];
+                    $tpost = $post["post"];
                     for ($commarri=0; $commarri < count($commarr); $commarri++) {
                         $commitem = $commarr[$commarri];
                         $topost = $commitem["post"];
-                        if (strcmp($post,$topost) == 0) {
-                            $npost = $postlist[$posti];
-                            $commentarr = $npost["comment"] ?? [];
+                        if (strcmp($tpost,$topost) == 0) {
+                            $commentarr = $post["comment"] ?? [];
                             array_push($commentarr,$commitem);
-                            $npost["comment"] = $commentarr;
-                            $postlist[$posti] = $npost;
+                            $post["comment"] = $commentarr;
                             if (count($commentarr)>=3) {
                                 break;
                             }
                         }
                     }
                 }
-                if ($dbreturcite[0] == 1010000) {
-                    $post = $postlist[$posti]["cite"];
-                    if ($post != null) {
-                        $citearrcount = count($citearr);
-                        for ($citearri=0; $citearri < $citearrcount; $citearri++) {
-                            $citeitem = $citearr[$citearri];
-                            $topost = $citeitem["post"];
-                            if (strcmp($post,$topost) == 0) {
-                                $npost = $postlist[$posti];
-                                $citeitem["files"] = strlen($citeitem["files"]) > 1 ? $nlcore->func->imagesurl($citeitem["files"],$filenone) : [$filenone];
-                                $citeitem["image"] = strlen($citeitem["image"]) > 1 ? $nlcore->func->imagesurl($citeitem["image"],$filenone) : [$filenone];
-                                $postlist[$postlisti] = $postitem;
-                                $npost["cite"] = $citeitem;
-                                $postlist[$posti] = $npost;
-                                break;
-                            }
-                            if ($citearri == $citearrcount-1) {
-                                $npost = $postlist[$posti];
-                                $npost["cite"] = ["nodata"=>""];
-                                $postlist[$posti] = $npost;
-                            }
-                        }
+            }else if ($dbreturn[0] == 1010001) {
+            } else {
+                $nscore->msg->stopmsg(4020300,$totpSecret);
+            }
+        }
+        // 合併轉發資料到貼文陣列
+        if ($dbreturcite[0] == 1010000) {
+            $cite = $post["cite"];
+            if ($cite != null) {
+                $citearrcount = count($citearr);
+                for ($citearri=0; $citearri < $citearrcount; $citearri++) {
+                    $citeitem = $citearr[$citearri];
+                    $topost = $citeitem["post"];
+                    if (strcmp($cite,$topost) == 0) {
+                        $citeitem["files"] = strlen($citeitem["files"]) > 1 ? $nlcore->func->imagesurl($citeitem["files"],$filenone) : [$filenone];
+                        $citeitem["image"] = strlen($citeitem["image"]) > 1 ? $nlcore->func->imagesurl($citeitem["image"],$filenone) : [$filenone];
+                        $postlist[$postlisti] = $postitem;
+                        $post["cite"] = $citeitem;
+                        break;
+                    }
+                    if ($citearri == $citearrcount-1) {
+                        $post["cite"] = ["nodata"=>""];
                     }
                 }
             }
-        } else if ($dbreturn[0] == 1010001) {
-        } else {
-            $nscore->msg->stopmsg(4020300,$totpSecret);
         }
+        // 合併跟隨資料到貼文陣列
+        if ($dbreturnfollow[0] == 1010000) {
+            $postuserhash = $post["userhash"];
+            foreach ($dbreturnfollow[2] as $userFollowInfo) {
+                $tuser = $userFollowInfo["tuser"];
+                $friend = $userFollowInfo["friend"];
+                $isover = true;
+                if (strcmp($postuserhash,$tuser) == 0) {
+                    $post["follow"] = intval($friend);
+                    $isover = false;
+                    break;
+                }
+                if ($isover) {
+                    $post["follow"] = -1;
+                }
+            }
+        } else if ($dbreturnfollow[0] == 1010000) {
+            // 沒有任何關注
+        }
+        // 儲存全部修改後的貼文到貼文陣列
+        $postlist[$posti] = $post;
     }
     $returnarr["tl"] = $postlist;
 } else if ($dbreturn[0] == 1010001) {
