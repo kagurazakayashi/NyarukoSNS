@@ -27,6 +27,7 @@ $banTable = $nscore->cfg->tables["ban"];
 $infoTable = $nlcore->cfg->db->tables["info"];
 $zinfoTable = $nscore->cfg->tables["info"];
 $commentTable = $nscore->cfg->tables["comment"];
+$followTable = $zecore->cfg->tables["follow"];
 $filenone = ["path"=>""];
 $selectcmd = "";
 $columnArrs = [];
@@ -48,8 +49,20 @@ foreach ($columnArr as $column) {
 }
 $sqlcmd = "";
 // 查詢貼文列表
+// SQL 朋友圈+
+$private = "";
+if (isset($argReceived["private"])) {
+    $privateLen = strlen($argReceived["private"]);
+    if ($privateLen == 0) { // 只顯示所關注人發的帖（朋友圈模式）
+        $private = (isset($argReceived["private"]) && $userHash) ? " AND `".$postsTable."`.`userhash` != '".$userHash."'AND `".$postsTable."`.`userhash` IN (SELECT `".$followTable."`.`tuser` FROM `".$followTable."` WHERE `".$followTable."`.`fuser` = '".$userHash."') " : "";
+    } else if ($privateLen == 4) { // TODO: 只顯示自己發的帖
+    } else if ($privateLen == 64) { // TODO: 只顯示指定使用者發的帖
+    }
+}
+// SQL 過濾遮蔽的使用者+
 $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
-$sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`userhash` ".$sqlban."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
+// SQL 查詢時間線
+$sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`userhash` ".$sqlban.$private."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
 $dbreturn = $nlcore->db->sqlc($sqlcmd);
 $returnarr = $nscore->msg->m(0,3000200);
 $citehashs = [];
