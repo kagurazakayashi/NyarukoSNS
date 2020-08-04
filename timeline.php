@@ -27,10 +27,11 @@ $banTable = $nscore->cfg->tables["ban"];
 $infoTable = $nlcore->cfg->db->tables["info"];
 $zinfoTable = $nscore->cfg->tables["info"];
 $commentTable = $nscore->cfg->tables["comment"];
-$followTable = $zecore->cfg->tables["follow"];
+$followTable = $nscore->cfg->tables["follow"];
 $filenone = ["path"=>""];
 $selectcmd = "";
 $columnArrs = [];
+// 準備需要查詢的內容
 $columnArr = ["name","image"];
 $columnArrs = array_merge($columnArrs,$columnArr);
 foreach ($columnArr as $column) {
@@ -49,20 +50,24 @@ foreach ($columnArr as $column) {
 }
 $sqlcmd = "";
 // 查詢貼文列表
-// SQL 朋友圈+
 $private = "";
+// 限制獲取貼文範圍
 if (isset($argReceived["private"])) {
-    $privateLen = strlen($argReceived["private"]);
-    if ($privateLen == 0) { // 只顯示所關注人發的帖（朋友圈模式）
-        $private = (isset($argReceived["private"]) && $userHash) ? " AND `".$postsTable."`.`userhash` != '".$userHash."'AND `".$postsTable."`.`userhash` IN (SELECT `".$followTable."`.`tuser` FROM `".$followTable."` WHERE `".$followTable."`.`fuser` = '".$userHash."') " : "";
-    } else if ($privateLen == 4) { // TODO: 只顯示自己發的帖
-    } else if ($privateLen == 64) { // TODO: 只顯示指定使用者發的帖
+    $argPrivate = $argReceived["private"];
+    if (strlen($argPrivate) == 64 && $nlcore->safe->is_rhash64($argPrivate)) {
+        // SQL 只顯示指定使用者發的帖（個人空間模式）
+        $private = "`".$postsTable."`.`userhash` == '".$argPrivate."' ";
+    } else {
+        // SQL 只顯示所關注人發的帖（朋友圈模式）
+        $private = ($userHash) ? " AND `".$postsTable."`.`userhash` != '".$userHash."'AND `".$postsTable."`.`userhash` IN (SELECT `".$followTable."`.`tuser` FROM `".$followTable."` WHERE `".$followTable."`.`fuser` = '".$userHash."') " : "";
     }
+} else {
+    // SQL 過濾遮蔽的使用者（如果使用者已經登入）
+    $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
 }
-// SQL 過濾遮蔽的使用者+
-$sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
 // SQL 查詢時間線
 $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`userhash` ".$sqlban.$private."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
+$nlcore->db->initReadDbs();
 $dbreturn = $nlcore->db->sqlc($sqlcmd);
 $returnarr = $nscore->msg->m(0,3000200);
 $citehashs = [];
@@ -91,8 +96,10 @@ if ($dbreturn[0] == 1010000) {
     $citearr = [];
     $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
     $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`post` IN ('".$citehashcmd."') AND`".$postsTable."`.`userhash` ".$sqlban."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
+    $nlcore->db->initReadDbs();
     $dbreturcite = $nlcore->db->sqlc($sqlcmd);
     if ($dbreturcite[0] >= 2000000) $nscore->msg->stopmsg(4010404,$totpSecret);
+    $citearr = $dbreturcite[2];
     // 批量取得評論
     $timelinecommnum = $nscore->cfg->timelinecommnum;
     if ($timelinecommnum > 0) {
@@ -122,6 +129,7 @@ if ($dbreturn[0] == 1010000) {
         // 集中獲取按日期排序的每條貼文的前三條評論
         $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
         $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE (".$posthashcmd.") AND `".$infoTable."`.`userhash` ".$sqlban."ORDER BY date DESC;";
+        $nlcore->db->initReadDbs();
         $dbreturn = $nlcore->db->sqlc($sqlcmd);
     }
     // 批量取得已關注狀態

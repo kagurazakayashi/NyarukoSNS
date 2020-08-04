@@ -16,7 +16,7 @@ $totpSecret = $inputInformation[1];
 $sessionInformation = $nlcore->safe->userLogged($inputInformation);
 $userHash = $sessionInformation[2];
 // 檢查使用哪個使用者操作
-if (isset($argReceived["userhash"])) {
+if (isset($argReceived["userhash"]) && strcmp($userHash,$argReceived["userhash"]) != 0) {
     $subuser = $argReceived["userhash"];
     if (!$nlcore->safe->is_rhash64($subuser)) $nlcore->msg->stopmsg(2070003,$totpSecret,"S-".$subuser);
     $issub = $nlcore->func->issubaccount($userHash,$subuser)[0];

@@ -11,7 +11,8 @@ class commentlist {
     function init():void {
         global $nlcore;
         global $nscore;
-        $clientInformation = $nlcore->safe->decryptargv($nscore->cfg->limittime["commentlist"]);
+        $limittime = $zecore->cfg->limittime["commentlist"];
+        $clientInformation = $nlcore->safe->decryptargv("",$limittime[0],$limittime[1]);
         $argReceived = $clientInformation[0];
         $totpSecret = $clientInformation[1];
         $totptoken = $clientInformation[2];
@@ -58,6 +59,7 @@ class commentlist {
         }
         $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
         $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$commentTable."`.`userhash` ".$sqlban."AND `".$commentTable."`.`post`='".$post."' ORDER BY date DESC LIMIT ".$limst.",". $offset.";";
+        $nlcore->db->initReadDbs();
         $dbreturn = $nlcore->db->sqlc($sqlcmd);
         $returnarr = $nscore->msg->m(0,3000201);
         if ($dbreturn[0] == 1010000) {

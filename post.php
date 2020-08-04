@@ -141,7 +141,7 @@ $userpwdtimes = $nlcore->sess->sessionstatuscon($usertoken,true,$totpSecret);
 $userHash = $userpwdtimes["userhash"];
 if (!$userpwdtimes) $nlcore->msg->stopmsg(2040400,$totpSecret,"T-".$usertoken); //token無效
 // 檢查使用哪個使用者操作
-if (isset($argReceived["userhash"])) {
+if (isset($argReceived["userhash"]) && strcmp($userHash,$argReceived["userhash"]) != 0) {
     $subuser = $argReceived["userhash"];
     if (strcmp($userHash,$subuser) != 0) {
         if (!$nlcore->safe->is_rhash64($subuser)) $nlcore->msg->stopmsg(2070003,$totpSecret,"S-".$subuser);
