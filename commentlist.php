@@ -33,7 +33,6 @@ class commentlist {
         if (!isset($argReceived["post"])) $nscore->msg->stopmsg(4020301,$totpSecret);
         $post = $argReceived["post"];
         // 讀取評論列表
-        $postsTable = $nscore->cfg->tables["posts"];
         $banTable = $nscore->cfg->tables["ban"];
         $infoTable = $nlcore->cfg->db->tables["info"];
         $commentTable = $nscore->cfg->tables["comment"];

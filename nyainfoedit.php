@@ -13,7 +13,8 @@ $inputInformation = $nlcore->safe->decryptargv("signup");
 $argReceived = $inputInformation[0];
 $totpSecret = $inputInformation[1];
 // 檢查用戶是否登入
-$sessionInformation = $nlcore->safe->userLogged($inputInformation);$userHash = $sessionInformation[2];
+$sessionInformation = $nlcore->safe->userLogged($inputInformation);
+$userHash = $sessionInformation[2];
 // 初始化類別
 $userinfoedit = new userInfoEdit($nlcore,$inputInformation,$sessionInformation);
 // 批量檢查並加入更新計劃

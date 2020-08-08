@@ -99,7 +99,7 @@ if ($dbreturn[0] == 1010000) {
     $nlcore->db->initReadDbs();
     $dbreturcite = $nlcore->db->sqlc($sqlcmd);
     if ($dbreturcite[0] >= 2000000) $nscore->msg->stopmsg(4010404,$totpSecret);
-    $citearr = $dbreturcite[2];
+    if ($dbreturcite[2] != null || strlen($dbreturcite[2]) > 0) $citearr = $dbreturcite[2];
     // 批量取得評論
     $timelinecommnum = $nscore->cfg->timelinecommnum;
     if ($timelinecommnum > 0) {
