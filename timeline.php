@@ -28,25 +28,25 @@ $infoTable = $nlcore->cfg->db->tables["info"];
 $zinfoTable = $nscore->cfg->tables["info"];
 $commentTable = $nscore->cfg->tables["comment"];
 $followTable = $nscore->cfg->tables["follow"];
-$filenone = ["path"=>""];
-$selectcmd = "";
+$fileNone = ["path"=>""];
+$selectCmd = "";
 $columnArrs = [];
 // 準備需要查詢的內容
 $columnArr = ["name","image"];
 $columnArrs = array_merge($columnArrs,$columnArr);
 foreach ($columnArr as $column) {
-    $f = (strlen($selectcmd) == 0) ? "" : ",";
-    $selectcmd .= $f."`".$infoTable."`.`".$column."`";
+    $f = (strlen($selectCmd) == 0) ? "" : ",";
+    $selectCmd .= $f."`".$infoTable."`.`".$column."`";
 }
-$columnArr = [""]; //需要的擴展用戶資料
+$columnArr = ["race"]; //需要的擴展用戶資料
 $columnArrs = array_merge($columnArrs,$columnArr);
 foreach ($columnArr as $column) {
-    $selectcmd .= ",`".$zinfoTable."`.`".$column."`";
+    $selectCmd .= ",`".$zinfoTable."`.`".$column."`";
 }
 $columnArr = ["post","userhash","date","modified","title","type","content","tag","files","share","mention","nocomment","noforward","cite","forwardnum","commentnum","likenum"];
 $columnArrs = array_merge($columnArrs,$columnArr);
 foreach ($columnArr as $column) {
-    $selectcmd .= ",`".$postsTable."`.`".$column."`";
+    $selectCmd .= ",`".$postsTable."`.`".$column."`";
 }
 $sqlcmd = "";
 // 查詢貼文列表
@@ -66,24 +66,24 @@ if (isset($argReceived["private"])) {
     $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
 }
 // SQL 查詢時間線
-$sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`userhash` ".$sqlban.$private."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
+$sqlcmd = "SELECT ".$selectCmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`userhash` ".$sqlban.$private."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
 $nlcore->db->initReadDbs();
-$dbreturn = $nlcore->db->sqlc($sqlcmd);
-$returnarr = $nscore->msg->m(0,3000200);
-$citehashs = [];
-if ($dbreturn[0] == 1010000) {
-    $postlist = $dbreturn[2];
+$dbReturnPost = $nlcore->db->sqlc($sqlcmd);
+$returnArr = $nscore->msg->m(0,3000200);
+$citeHashs = [];
+if ($dbReturnPost[0] == 1010000) {
+    $postList = $dbReturnPost[2];
     $posthashs = [];
-    for ($postlisti=0; $postlisti < count($postlist); $postlisti++) {
-        $postitem = $postlist[$postlisti];
+    for ($postListi=0; $postListi < count($postList); $postListi++) {
+        $postitem = $postList[$postListi];
         $post = $postitem["post"];
         array_push($posthashs,$post);
         $cite = $postitem["cite"];
-        if ($cite) array_push($citehashs,$cite);
+        if ($cite) array_push($citeHashs,$cite);
         // 補充檔案訊息
-        $postitem["files"] = strlen($postitem["files"]) > 1 ? $nlcore->func->imagesurl($postitem["files"],$filenone) : [$filenone];
-        $postitem["image"] = strlen($postitem["image"]) > 1 ? $nlcore->func->imagesurl($postitem["image"],$filenone) : [$filenone];
-        $postlist[$postlisti] = $postitem;
+        $postitem["files"] = strlen($postitem["files"]) > 1 ? $nlcore->func->imagesurl($postitem["files"],$fileNone) : [$fileNone];
+        $postitem["image"] = strlen($postitem["image"]) > 1 ? $nlcore->func->imagesurl($postitem["image"],$fileNone) : [$fileNone];
+        $postList[$postListi] = $postitem;
         // 校驗資料庫取出資訊完整性
         foreach ($columnArrs as $column) {
             if (!in_array($column,array_keys($postitem))) {
@@ -92,34 +92,34 @@ if ($dbreturn[0] == 1010000) {
         }
     }
     // 批量取得轉發貼文詳情
-    $citehashcmd = implode("','", $citehashs);
+    $citehashcmd = implode("','", $citeHashs);
     $citearr = [];
     $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
-    $sqlcmd = "SELECT ".$selectcmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`post` IN ('".$citehashcmd."') AND`".$postsTable."`.`userhash` ".$sqlban."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
+    $sqlcmd = "SELECT ".$selectCmd." FROM `".$postsTable."` JOIN `".$infoTable."` ON `".$postsTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$postsTable."`.`post` IN ('".$citehashcmd."') AND`".$postsTable."`.`userhash` ".$sqlban."ORDER BY date DESC LIMIT ".$limst.",".$offset.";";
     $nlcore->db->initReadDbs();
-    $dbreturcite = $nlcore->db->sqlc($sqlcmd);
-    if ($dbreturcite[0] >= 2000000) $nscore->msg->stopmsg(4010404,$totpSecret);
-    if ($dbreturcite[2] != null || strlen($dbreturcite[2]) > 0) $citearr = $dbreturcite[2];
+    $dbReturCite = $nlcore->db->sqlc($sqlcmd);
+    if ($dbReturCite[0] >= 2000000) $nscore->msg->stopmsg(4010404,$totpSecret);
+    if ($dbReturCite[2] != null || strlen($dbReturCite[2]) > 0) $citearr = $dbReturCite[2];
     // 批量取得評論
     $timelinecommnum = $nscore->cfg->timelinecommnum;
     if ($timelinecommnum > 0) {
         $columnArrs = [];
-        $selectcmd = "";
+        $selectCmd = "";
         $columnArr = ["name"];
         $columnArrs = array_merge($columnArrs,$columnArr);
         foreach ($columnArr as $column) {
-            $f = (strlen($selectcmd) == 0) ? "" : ",";
-            $selectcmd .= $f."`".$infoTable."`.`".$column."`";
+            $f = (strlen($selectCmd) == 0) ? "" : ",";
+            $selectCmd .= $f."`".$infoTable."`.`".$column."`";
         }
-        $columnArr = [""]; //需要的擴展用戶資料
+        $columnArr = ["race"]; //需要的擴展用戶資料
         $columnArrs = array_merge($columnArrs,$columnArr);
         foreach ($columnArr as $column) {
-            $selectcmd .= ",`".$zinfoTable."`.`".$column."`";
+            $selectCmd .= ",`".$zinfoTable."`.`".$column."`";
         }
         $columnArr = ["post","comment","userhash","date","modified","content","type","files","likenum","storey","commentnum"];
         $columnArrs = array_merge($columnArrs,$columnArr);
         foreach ($columnArr as $column) {
-            $selectcmd .= ",`".$commentTable."`.`".$column."`";
+            $selectCmd .= ",`".$commentTable."`.`".$column."`";
         }
         // 準備集中查詢，合併語句
         for ($posthashsi=0; $posthashsi < count($posthashs); $posthashsi++) {
@@ -128,14 +128,15 @@ if ($dbreturn[0] == 1010000) {
         $posthashcmd = implode(" OR ", $posthashs);
         // 集中獲取按日期排序的每條貼文的前三條評論
         $sqlban = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
-        $sqlcmd = "SELECT ".$selectcmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE (".$posthashcmd.") AND `".$infoTable."`.`userhash` ".$sqlban."ORDER BY date DESC;";
+        $sqlcmd = "SELECT ".$selectCmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash` WHERE (".$posthashcmd.") AND `".$infoTable."`.`userhash` ".$sqlban."ORDER BY date DESC;";
         $nlcore->db->initReadDbs();
-        $dbreturn = $nlcore->db->sqlc($sqlcmd);
+        $dbReturnComm = $nlcore->db->sqlc($sqlcmd);
+        if ($dbReturnComm[0] >= 2000000) $nscore->msg->stopmsg(4020300,$totpSecret);
     }
     // 批量取得已關注狀態
     $postuserhashs = [];
     $postuserwhere = [];
-    foreach ($postlist as $post) {
+    foreach ($postList as $post) {
         $nowuserhash = $post["userhash"];
         if (!in_array($nowuserhash,$postuserhashs)) {
             array_push($postuserhashs,$nowuserhash);
@@ -155,16 +156,27 @@ if ($dbreturn[0] == 1010000) {
     $customWhere = implode(" OR ", $postuserwhere);
     $tableStr = $nscore->cfg->tables["follow"];
     $columnArr = ["tuser","friend"];
-    $dbreturnfollow = $nlcore->db->select($columnArr,$tableStr,[],$customWhere);
+    $dbReturnFollow = $nlcore->db->select($columnArr,$tableStr,[],$customWhere);
+    if ($dbReturnFollow[0] >= 2000000) $nscore->msg->stopmsg(4040015,$totpSecret);
+    // 批次獲取贊
+    $tableStr = $nscore->cfg->tables["like"];
+    $postuserwhere = [];
+    foreach ($postList as $post) {
+        $nowline = "(`user`='".$userHash."' AND `post`='".$post["post"]."')";
+        array_push($postuserwhere,$nowline);
+    }
+    $customWhere = implode(" OR ", $postuserwhere);
+    $dbReturnLike = $nlcore->db->select(["post"],$tableStr,[],$customWhere);
+    if ($dbReturnLike[0] >= 2000000) $nscore->msg->stopmsg(4030104,$totpSecret);
     // 合併關注狀態到貼文陣列
-    if ($dbreturnfollow[0] == 1010000 && $dbreturcite[0] == 1010000) {
-        $citearr = $dbreturcite[2];
+    if ($dbReturnFollow[0] == 1010000 && $dbReturCite[0] == 1010000) {
+        $citearr = $dbReturCite[2];
         $citearrcount = count($citearr);
         for ($citearri=0; $citearri < $citearrcount; $citearri++) {
             $citeitem = $citearr[$citearri];
             $citeuserhash = $citeitem["userhash"];
             $isover = true;
-            foreach ($dbreturnfollow[2] as $userFollowInfo) {
+            foreach ($dbReturnFollow[2] as $userFollowInfo) {
                 $tuser = $userFollowInfo["tuser"];
                 $friend = $userFollowInfo["friend"];
                 if (strcmp($citeuserhash,$tuser) == 0) {
@@ -181,13 +193,13 @@ if ($dbreturn[0] == 1010000) {
         }
     }
     // 將批量獲取的資料合併到貼文陣列
-    for ($posti=0; $posti < count($postlist); $posti++) {
-        $post = $postlist[$posti];
+    for ($posti=0; $posti < count($postList); $posti++) {
+        $post = $postList[$posti];
         // 合併評論資料到貼文陣列
         if ($timelinecommnum > 0) {
-            if ($dbreturn[0] == 1010000 || $dbreturcite[0] == 1010000) {
-                $commarr = $dbreturn[2];
-                if ($dbreturn[0] == 1010000) {
+            if ($dbReturnComm[0] == 1010000 || $dbReturCite[0] == 1010000) {
+                $commarr = $dbReturnComm[2];
+                if ($dbReturnComm[0] == 1010000) {
                     $tpost = $post["post"];
                     for ($commarri=0; $commarri < count($commarr); $commarri++) {
                         $commitem = $commarr[$commarri];
@@ -202,13 +214,10 @@ if ($dbreturn[0] == 1010000) {
                         }
                     }
                 }
-            }else if ($dbreturn[0] == 1010001) {
-            } else {
-                $nscore->msg->stopmsg(4020300,$totpSecret);
             }
         }
         // 合併轉發資料到貼文陣列
-        if ($dbreturcite[0] == 1010000) {
+        if ($dbReturCite[0] == 1010000) {
             $cite = $post["cite"];
             if ($cite != null) {
                 $citearrcount = count($citearr);
@@ -216,9 +225,9 @@ if ($dbreturn[0] == 1010000) {
                     $citeitem = $citearr[$citearri];
                     $topost = $citeitem["post"];
                     if (strcmp($cite,$topost) == 0) {
-                        $citeitem["files"] = strlen($citeitem["files"]) > 1 ? $nlcore->func->imagesurl($citeitem["files"],$filenone) : [$filenone];
-                        $citeitem["image"] = strlen($citeitem["image"]) > 1 ? $nlcore->func->imagesurl($citeitem["image"],$filenone) : [$filenone];
-                        $postlist[$postlisti] = $postitem;
+                        $citeitem["files"] = strlen($citeitem["files"]) > 1 ? $nlcore->func->imagesurl($citeitem["files"],$fileNone) : [$fileNone];
+                        $citeitem["image"] = strlen($citeitem["image"]) > 1 ? $nlcore->func->imagesurl($citeitem["image"],$fileNone) : [$fileNone];
+                        $postList[$postListi] = $postitem;
                         $post["cite"] = $citeitem;
                         break;
                     }
@@ -229,9 +238,9 @@ if ($dbreturn[0] == 1010000) {
             }
         }
         // 合併跟隨資料到貼文陣列
-        if ($dbreturnfollow[0] == 1010000) {
+        if ($dbReturnFollow[0] == 1010000) {
             $postuserhash = $post["userhash"];
-            foreach ($dbreturnfollow[2] as $userFollowInfo) {
+            foreach ($dbReturnFollow[2] as $userFollowInfo) {
                 $tuser = $userFollowInfo["tuser"];
                 $friend = $userFollowInfo["friend"];
                 $isover = true;
@@ -244,16 +253,24 @@ if ($dbreturn[0] == 1010000) {
                     $post["follow"] = -1;
                 }
             }
-        } else if ($dbreturnfollow[0] == 1010000) {
-            // 沒有任何關注
+        }
+        // 合併贊到貼文陣列
+        if ($dbReturnLike[0] == 1010000) {
+            foreach ($dbReturnLike[2] as $nowPostitem) {
+                $nowPost = $nowPostitem["post"];
+                if (strcmp($post["post"],$nowPost) == 0) {
+                    $post["ilike"] = "1";
+                    break;
+                }
+            }
         }
         // 儲存全部修改後的貼文到貼文陣列
-        $postlist[$posti] = $post;
+        $postList[$posti] = $post;
     }
-    $returnarr["tl"] = $postlist;
-} else if ($dbreturn[0] == 1010001) {
-    $returnarr["tl"] = [];
+    $returnArr["tl"] = $postList;
+} else if ($dbReturnPost[0] == 1010001) {
+    $returnArr["tl"] = [];
 } else {
     $nscore->msg->stopmsg(4020000,$totpSecret);
 }
-echo $nlcore->safe->encryptargv($returnarr,$totpSecret);
+exit($nlcore->safe->encryptargv($returnArr,$totpSecret));
