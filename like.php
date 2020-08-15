@@ -16,33 +16,33 @@ $sessionInformation = $nlcore->safe->userLogged($inputInformation);
 $userHash = $sessionInformation[2];
 // 获取输入的POST
 $post = ($argReceived["post"] && $nlcore->safe->is_rhash64($argReceived["post"])) ? $argReceived["post"] : $nlcore->msg->stopmsg(2000101,$totpSecret);
-$citetype = $argReceived["citetype"] ?? "POST";
+$citeType = $argReceived["citetype"] ?? "POST";
 // 檢查使用哪個使用者操作
 if (isset($argReceived["userhash"]) && strcmp($userHash,$argReceived["userhash"]) != 0) {
-    $subuser = $argReceived["userhash"];
-    if (!$nlcore->safe->is_rhash64($subuser)) $nlcore->msg->stopmsg(2070003,$totpSecret,"S-".$subuser);
-    $issub = $nlcore->func->issubaccount($userHash,$subuser)[0];
-    if ($issub == false) $nlcore->msg->stopmsg(2070004,$totpSecret,"S-".$subuser);
-    $userHash = $subuser;
+    $subUser = $argReceived["userhash"];
+    if (!$nlcore->safe->is_rhash64($subUser)) $nlcore->msg->stopmsg(2070003,$totpSecret,"S-".$subUser);
+    $isSub = $nlcore->func->issubaccount($userHash,$subUser)[0];
+    if ($isSub == false) $nlcore->msg->stopmsg(2070004,$totpSecret,"S-".$subUser);
+    $userHash = $subUser;
 }
 // 目標
 $postsCommentTable = "";
 $postsComment = "";
 $likeInsertDic = [
     "user" => $userHash,
-    "citetype" => $citetype,
+    "citetype" => $citeType,
     "post" => $post
 ];
-if (strcmp($citetype,"POST") == 0) {
+if (strcmp(strtoupper($citeType),"POST") == 0) {
     $postsCommentTable = $nscore->cfg->tables["posts"];
     $postsComment = "post";
-} else if (strcmp($citetype,"COMM") == 0) {
+} else if (strcmp(strtoupper($citeType),"COMM") == 0) {
     $postsCommentTable = $nscore->cfg->tables["comment"];
     $postsComment = "comment";
 } else {
-    $nscore->msg->stopmsg(4010001,$totpSecret,$citetype);
+    $nscore->msg->stopmsg(4010001,$totpSecret,$citeType);
 }
-$okcode = 4030102;
+$okCode = 4030102;
 $like = isset($argReceived["like"]) ? intval($argReceived["like"]) : 2;
 $likeTable = $nscore->cfg->tables["like"];
 if ($like == 1) { // 贊
@@ -56,14 +56,14 @@ if ($like == 1) { // 贊
         ];
         $whereDic = [$postsComment => $post];
         $result = $nlcore->db->update($updateDic,$postsCommentTable,$whereDic);
-        if ($result[0] >= 2000000) $nscore->msg->stopmsg($okcode,$totpSecret);
-        $okcode = 3000300;
+        if ($result[0] >= 2000000) $nscore->msg->stopmsg($okCode,$totpSecret);
+        $okCode = 3000300;
     } else if ($result[0] == 1010002) { // 已存在
-        $okcode = 3000301;
+        $okCode = 3000301;
     } else { // 錯誤
-        if ($result[0] >= 2000000) $nscore->msg->stopmsg($okcode,$totpSecret);
+        if ($result[0] >= 2000000) $nscore->msg->stopmsg($okCode,$totpSecret);
     }
-    $returnarr = $nscore->msg->m(0,$okcode);
+    $returnArr = $nscore->msg->m(0,$okCode);
 } else if ($like == 0) { // 取消贊
     // 從 贊 表移除
     $whereDic = ["post" => $post];
@@ -77,12 +77,12 @@ if ($like == 1) { // 贊
         ];
         $whereDic = [$postsComment => $post];
         $result = $nlcore->db->update($updateDic,$postsCommentTable,$whereDic);
-        if ($result[0] >= 2000000) $nscore->msg->stopmsg($okcode,$totpSecret);
-        $okcode = 3000302;
+        if ($result[0] >= 2000000) $nscore->msg->stopmsg($okCode,$totpSecret);
+        $okCode = 3000302;
     } else { // (==0)已經刪除
-        $okcode = 3000303;
+        $okCode = 3000303;
     }
-    $returnarr = $nscore->msg->m(0,$okcode);
+    $returnArr = $nscore->msg->m(0,$okCode);
 } else { // 查詢贊
     $limst = isset($argReceived["limst"]) ? intval($argReceived["limst"]) : 0;
     $offset = isset($argReceived["offset"]) ? intval($argReceived["offset"]) : 10;
@@ -90,12 +90,12 @@ if ($like == 1) { // 贊
     $whereDic = ["post" => $post];
     $result = $nlcore->db->select($columnArr,$likeTable,$whereDic,"","AND",false,["date",true],[$limst,$offset]);
     if ($result[0] >= 2000000) $nscore->msg->stopmsg(4030104,$totpSecret);
-    $likeusers = [];
+    $likeUsers = [];
     foreach ($result[2] as $item) {
-        array_push($likeusers,$item["user"]);
+        array_push($likeUsers,$item["user"]);
     }
-    $returnarr = $nscore->msg->m(0,3000304);
-    $returnarr["users"] = $likeusers;
+    $returnArr = $nscore->msg->m(0,3000304);
+    $returnArr["users"] = $likeUsers;
 }
-echo $nlcore->safe->encryptargv($returnarr,$totpSecret);
+exit($nlcore->safe->encryptargv($returnArr,$totpSecret));
 ?>
