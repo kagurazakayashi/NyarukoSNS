@@ -57,7 +57,7 @@ if ($dbReturn[0] == 1010000) {
     $tableStr = $nscore->cfg->tables["like"];
     $postUserWhere = [];
     foreach ($commList as $comm) {
-        $nowline = "(`user`='".$userHash."' AND `post`='".$comm["comment"]."')";
+        $nowline = "(`user`='".$userHash."' AND `post`='".$comm["comment"]."' AND `citetype`='COMM')";
         array_push($postUserWhere,$nowline);
     }
     $customWhere = implode(" OR ", $postUserWhere);

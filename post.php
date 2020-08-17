@@ -54,7 +54,7 @@ function gettagid(string $tag, string $totpSecret):int {
 
 /**
 * @description: 刪除貼文
-* @param String post 貼文哈希
+* @param String post 貼文雜湊
 * @param String totpsecret 加密用secret
 */
 function deletepost(string $post, string $totpSecret):void {
@@ -113,7 +113,8 @@ function deletepost(string $post, string $totpSecret):void {
     // 移除貼文點贊
     $tableStr = $nscore->cfg->tables["like"];
     $whereDic = [
-        "post" => $post
+        "post" => $post,
+        "citetype" => "POST"
     ];
     $dbreturn = $nlcore->db->delete($tableStr,$whereDic);
     if ($dbreturn[0] >= 2000000) {

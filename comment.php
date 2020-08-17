@@ -126,6 +126,16 @@ if ($dbreturn[0] == 1010000) {
         if ($dbreturn[0] >= 2000000) {
             $nscore->msg->stopmsg(4020202,$totpSecret,$nowfile);
         }
+        // 移除評論點贊
+        $tableStr = $zecore->cfg->tables["like"];
+        $whereDic = [
+            "post" => $post,
+            "citetype" => "COMM"
+        ];
+        $dbreturn = $nlcore->db->delete($tableStr,$whereDic);
+        if ($dbreturn[0] >= 2000000) {
+            $zecore->msg->stopmsg(4030101,$totpSecret);
+        }
     } else {
         $commentnum = intval($dbreturndata["commentnum"]) + 1;
         $commentmax = intval($dbreturndata["commentmax"]) + 1;
