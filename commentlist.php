@@ -8,9 +8,9 @@ $phpFileUserSrcDir = $phpFileDir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPAR
 require_once $phpFileDir."nyscore.class.php";
 require_once $phpFileUserSrcDir."nyacore.class.php";
 $limittime = $nscore->cfg->limittime["commentlist"];
-$clientInformation = $nlcore->safe->decryptargv("",$limittime[0],$limittime[1]);
-$argReceived = $clientInformation[0];
-$totpSecret = $clientInformation[1];
+$inputInformation = $nlcore->safe->decryptargv("",$limittime[0],$limittime[1]);
+$argReceived = $inputInformation[0];
+$totpSecret = $inputInformation[1];
 // 檢查用戶是否登入，若沒有提供 token 則…算了
 $userHash = null;
 if (isset($argReceived["token"]) && strlen($argReceived["token"]) > 0) {
