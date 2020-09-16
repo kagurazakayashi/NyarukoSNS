@@ -15,6 +15,7 @@ uurl = jsonfiledata["nys"]+"post.php"
 salt = ''.join(random.sample(string.ascii_letters + string.digits, 16))
 udataarr = {
     "token":jsonfiledata["token"],
+    "userhash":"K8xr5bauZi5hXmgV5am4lvYFbvYyVPsoR8XLGmIY6PTsBtuXXZsXMGOHiS4NWYPI",
     "title":"测试贴文",
     "content":("测试贴文 @神楽坂雅詩#5534 #你好 世界#"+salt),
     "type":"image",

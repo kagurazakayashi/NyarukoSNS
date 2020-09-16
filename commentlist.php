@@ -8,19 +8,18 @@ $phpFileUserSrcDir = $phpFileDir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPAR
 require_once $phpFileDir."nyscore.class.php";
 require_once $phpFileUserSrcDir."nyacore.class.php";
 $limittime = $nscore->cfg->limittime["commentlist"];
-$inputInformation = $nlcore->safe->decryptargv("",$limittime[0],$limittime[1]);
-$argReceived = $inputInformation[0];
-$totpSecret = $inputInformation[1];
+$nlcore->sess->decryptargv("",$limittime[0],$limittime[1]);
+$argReceived = $nlcore->sess->argReceived;
 // 檢查用戶是否登入，若沒有提供 token 則…算了
 $userHash = null;
 if (isset($argReceived["token"]) && strlen($argReceived["token"]) > 0) {
-    $sessionInformation = $nlcore->safe->userLogged($inputInformation);
-    $userHash = $sessionInformation[2];
+    $nlcore->sess->userLogged();
+    $userHash = $nlcore->sess->userHash;
 }
 // 導入提交的參數
 $limst = isset($argReceived["limst"]) ? intval($argReceived["limst"]) : 0;
 $offset = isset($argReceived["offset"]) ? intval($argReceived["offset"]) : 10;
-if (!isset($argReceived["post"])) $nscore->msg->stopmsg(4020301,$totpSecret);
+if (!isset($argReceived["post"])) $nscore->msg->stopmsg(4020301);
 $post = $argReceived["post"];
 // 讀取評論列表
 $banTable = $nscore->cfg->tables["ban"];
@@ -36,7 +35,7 @@ foreach ($columnArr as $column) {
     $f = (strlen($selectCmd) == 0) ? "" : ",";
     $selectCmd .= $f."`".$infoTable."`.`".$column."`";
 }
-$columnArr = ["race"]; //需要的擴展用戶資料
+$columnArr = [""]; //需要的擴展用戶資料
 $columnArrs = array_merge($columnArrs,$columnArr);
 foreach ($columnArr as $column) {
     $selectCmd .= ",`".$zinfoTable."`.`".$column."`";
@@ -50,7 +49,7 @@ $sqlBan = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable.
 $sqlcmd = "SELECT ".$selectCmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$commentTable."`.`userhash` ".$sqlBan."AND `".$commentTable."`.`post`='".$post."' ORDER BY date DESC LIMIT ".$limst.",". $offset.";";
 $nlcore->db->initReadDbs();
 $dbReturn = $nlcore->db->sqlc($sqlcmd);
-$returnArr = $nscore->msg->m(0,3000201);
+$returnClientData = $nscore->msg->m(0,3000201);
 if ($dbReturn[0] == 1010000) {
     $commList = $dbReturn[2];
     // 批次獲取贊
@@ -62,7 +61,7 @@ if ($dbReturn[0] == 1010000) {
     }
     $customWhere = implode(" OR ", $postUserWhere);
     $dbReturnLike = $nlcore->db->select(["post"],$tableStr,[],$customWhere);
-    if ($dbReturnLike[0] >= 2000000) $nscore->msg->stopmsg(4030104,$totpSecret);
+    if ($dbReturnLike[0] >= 2000000) $nscore->msg->stopmsg(4030104);
     // 補充訊息
     for ($i=0; $i < count($commList); $i++) {
         // 合併檔案訊息到貼文陣列
@@ -83,15 +82,14 @@ if ($dbReturn[0] == 1010000) {
         // 校驗資料庫取出資訊完整性
         foreach ($columnArrs as $column) {
             if (!in_array($column,array_keys($commItem))) {
-                $nscore->msg->stopmsg(4020302,$totpSecret,$column);
+                $nscore->msg->stopmsg(4020302,$column);
             }
         }
     }
-    $returnArr["comm"] = $commList;
+    $returnClientData["comm"] = $commList;
 } else if ($dbReturn[0] == 1010001) {
-    $returnArr["comm"] = [];
+    $returnClientData["comm"] = [];
 } else {
-    $nscore->msg->stopmsg(4020300,$totpSecret);
+    $nscore->msg->stopmsg(4020300);
 }
-exit($nlcore->safe->encryptargv($returnArr,$totpSecret));
-?>
+exit($nlcore->sess->encryptargv($returnClientData));

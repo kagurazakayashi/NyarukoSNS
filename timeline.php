@@ -10,14 +10,13 @@ require_once $phpFileDir . "nyscore.class.php";
 require_once $phpFileUserSrcDir . "nyacore.class.php";
 // IP檢查和解密客戶端提交的資訊
 $frequencyLimitation = $nscore->cfg->limittime["timeline"];
-$inputInformation = $nlcore->safe->decryptargv("", $frequencyLimitation[0], $frequencyLimitation[1]);
-$argReceived = $inputInformation[0];
-$totpSecret = $inputInformation[1];
+$nlcore->sess->decryptargv("", $frequencyLimitation[0], $frequencyLimitation[1]);
+$argReceived = $nlcore->sess->argReceived;
 // 檢查用戶是否登入，若沒有提供 token 則…算了
 $userHash = null;
 if (isset($argReceived["token"]) && strlen($argReceived["token"]) > 0) {
-    $sessionInformation = $nlcore->safe->userLogged($inputInformation);
-    $userHash = $sessionInformation[2];
+    $nlcore->sess->userLogged();
+    $userHash = $nlcore->sess->userHash;
 }
 // 導入提交的參數
 $limst = isset($argReceived["limst"]) ? intval($argReceived["limst"]) : 0;
@@ -70,13 +69,13 @@ if (isset($argReceived["post"]) && $nlcore->safe->is_rhash64($argReceived["post"
     }
     // SQL 過濾遮蔽的使用者（如果使用者已經登入）
     $sqlban = $userHash ? "NOT IN (SELECT `" . $banTable . "`.`tuser` FROM `" . $banTable . "` WHERE `" . $banTable . "`.`fuser` = '" . $userHash . "') " : "";
-    $sqlbanAprivate = (strlen($sqlban) > 0 && strlen($private) > 0) ? " AND " : "";
+    $sqlbanAprivate = ""; // (strlen($sqlban) > 0 && strlen($private) > 0) ? " AND " : "";
     // SQL 查詢時間線
     $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash` = `" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON " . $infoTable . ".`userhash` = " . $zinfoTable . ".`userhash` WHERE `" . $postsTable . "`.`userhash` " . $sqlban . $sqlbanAprivate . $private . "ORDER BY date DESC LIMIT " . $limst . "," . $offset . ";";
 }
 $nlcore->db->initReadDbs();
 $dbReturnPost = $nlcore->db->sqlc($sqlcmd);
-$returnArr = $nscore->msg->m(0, 3000200);
+$returnClientData = $nscore->msg->m(0, 3000200);
 $citeHashs = [];
 if ($dbReturnPost[0] == 1010000) {
     $postList = $dbReturnPost[2];
@@ -94,7 +93,7 @@ if ($dbReturnPost[0] == 1010000) {
         // 校驗資料庫取出資訊完整性
         foreach ($columnArrs as $column) {
             if (!in_array($column, array_keys($postitem))) {
-                $nscore->msg->stopmsg(4010700, $totpSecret, $column);
+                $nscore->msg->stopmsg(4010700, $column);
             }
         }
     }
@@ -105,7 +104,7 @@ if ($dbReturnPost[0] == 1010000) {
     $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash` = `" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON " . $infoTable . ".`userhash` = " . $zinfoTable . ".`userhash` WHERE `" . $postsTable . "`.`post` IN ('" . $citehashcmd . "') AND`" . $postsTable . "`.`userhash` " . $sqlban . "ORDER BY date DESC LIMIT " . $limst . "," . $offset . ";";
     $nlcore->db->initReadDbs();
     $dbReturCite = $nlcore->db->sqlc($sqlcmd);
-    if ($dbReturCite[0] >= 2000000) $nscore->msg->stopmsg(4010404, $totpSecret);
+    if ($dbReturCite[0] >= 2000000) $nscore->msg->stopmsg(4010404);
     if ($dbReturCite[2] != null || strlen($dbReturCite[2]) > 0) $citearr = $dbReturCite[2];
     // 批量取得評論
     $timelinecommnum = $nscore->cfg->timelinecommnum;
@@ -138,7 +137,7 @@ if ($dbReturnPost[0] == 1010000) {
         $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $commentTable . "` JOIN `" . $infoTable . "` ON `" . $commentTable . "`.`userhash` = `" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON `" . $infoTable . "`.`userhash` = `" . $zinfoTable . "`.`userhash` WHERE (" . $posthashcmd . ") AND `" . $infoTable . "`.`userhash` " . $sqlban . "ORDER BY date DESC;";
         $nlcore->db->initReadDbs();
         $dbReturnComm = $nlcore->db->sqlc($sqlcmd);
-        if ($dbReturnComm[0] >= 2000000) $nscore->msg->stopmsg(4020300, $totpSecret);
+        if ($dbReturnComm[0] >= 2000000) $nscore->msg->stopmsg(4020300);
     }
     // 批量取得已關注狀態
     $postuserhashs = [];
@@ -164,7 +163,7 @@ if ($dbReturnPost[0] == 1010000) {
     $tableStr = $nscore->cfg->tables["follow"];
     $columnArr = ["tuser", "friend"];
     $dbReturnFollow = $nlcore->db->select($columnArr, $tableStr, [], $customWhere);
-    if ($dbReturnFollow[0] >= 2000000) $nscore->msg->stopmsg(4040015, $totpSecret);
+    if ($dbReturnFollow[0] >= 2000000) $nscore->msg->stopmsg(4040015);
     // 批次獲取贊
     $tableStr = $nscore->cfg->tables["like"];
     $postuserwhere = [];
@@ -174,7 +173,7 @@ if ($dbReturnPost[0] == 1010000) {
     }
     $customWhere = implode(" OR ", $postuserwhere);
     $dbReturnLike = $nlcore->db->select(["post"], $tableStr, [], $customWhere);
-    if ($dbReturnLike[0] >= 2000000) $nscore->msg->stopmsg(4030104, $totpSecret);
+    if ($dbReturnLike[0] >= 2000000) $nscore->msg->stopmsg(4030104);
     // 合併關注狀態到貼文陣列
     if ($dbReturnFollow[0] == 1010000 && $dbReturCite[0] == 1010000) {
         $citearr = $dbReturCite[2];
@@ -274,10 +273,10 @@ if ($dbReturnPost[0] == 1010000) {
         // 儲存全部修改後的貼文到貼文陣列
         $postList[$posti] = $post;
     }
-    $returnArr["tl"] = $postList;
+    $returnClientData["tl"] = $postList;
 } else if ($dbReturnPost[0] == 1010001) {
-    $returnArr["tl"] = [];
+    $returnClientData["tl"] = [];
 } else {
-    $nscore->msg->stopmsg(4020000, $totpSecret);
+    $nscore->msg->stopmsg(4020000);
 }
-exit($nlcore->safe->encryptargv($returnArr, $totpSecret));
+exit($nlcore->sess->encryptargv($returnClientData));

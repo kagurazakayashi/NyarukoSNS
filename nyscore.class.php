@@ -24,4 +24,3 @@ class nyscore {
 global $nscore;
 if (!isset($nscore)) $nscore = new nyscore();
 $nscore->applyconfig();
-?>

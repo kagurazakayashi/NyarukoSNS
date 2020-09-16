@@ -61,6 +61,7 @@ CREATE TABLE `s1_follow` (
   `fuser` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '操作人',
   `tuser` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '被操作人',
   `friend` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否为双向',
+  `time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '关注时间',
   `timeout` datetime DEFAULT NULL COMMENT '有效期至'
 ) ENGINE=InnoDB DEFAULT CHARSET=ascii COLLATE=ascii_bin COMMENT='关注表';
 
@@ -73,9 +74,9 @@ CREATE TABLE `s1_follow` (
 CREATE TABLE `s1_info` (
   `id` int UNSIGNED NOT NULL COMMENT '序号',
   `userhash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '用户哈希',
-  `following` int UNSIGNED NOT NULL COMMENT '关注数',
-  `followers` int UNSIGNED NOT NULL COMMENT '粉丝数',
-  `postnum` int UNSIGNED NOT NULL COMMENT '发帖数'
+  `following` int UNSIGNED NOT NULL DEFAULT '0' COMMENT '关注数',
+  `followers` int UNSIGNED DEFAULT '0' COMMENT '粉丝数',
+  `postnum` int UNSIGNED NOT NULL DEFAULT '0' COMMENT '发帖数'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
 
 -- --------------------------------------------------------
@@ -102,7 +103,8 @@ CREATE TABLE `s1_like` (
   `id` bigint UNSIGNED NOT NULL COMMENT '序号',
   `user` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '发布用户哈希',
   `citetype` enum('POST','COMM') CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL DEFAULT 'POST' COMMENT '被赞的内容类型',
-  `post` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '被赞的贴文或评论'
+  `post` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '被赞的贴文或评论',
+  `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '点赞时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci COMMENT='择择点赞表';
 
 -- --------------------------------------------------------

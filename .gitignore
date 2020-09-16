@@ -9,6 +9,5 @@ __pycache__
 node_modules
 upload/*
 tests/summernote/*
-upload/*
 tests/testconfig.json
 git_stats

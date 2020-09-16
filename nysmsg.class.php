@@ -230,39 +230,38 @@ class nysmsg {
      * @param String msgmode 输入 totp secret 而不是数字的话，会用此 secret 加密并返回。
      * @param Int code 错误代码
      * @param String/Array info 附加错误信息
-     * @param String totpsecret 加密用secret（不加则自动）
      * @return String 返回由 msgmode 设置的 null / json / 加密 json
      */
     function m($msgmode = 0,$code = 4000000,$info = null) {
-        $returnarr = array(
+        $returnClientData = array(
             "code" => $code,
             "msg" => $this->imsg[$code]
         );
-        if (is_numeric($returnarr["msg"])) $returnarr["msg"] = $this->imsg[$returnarr["msg"]];
-        if ($info) $returnarr["info"] = $info;
+        if (is_numeric($returnClientData["msg"])) $returnClientData["msg"] = $this->imsg[$returnClientData["msg"]];
+        if ($info) $returnClientData["info"] = $info;
         if (is_numeric($msgmode) && $msgmode === 0) {
-            return $returnarr;
+            return $returnClientData;
         } else if (is_numeric($msgmode) && $msgmode === 1) {
-            return json_encode($returnarr);
+            return json_encode($returnClientData);
         } else {
             global $nlcore;
-            return $nlcore->safe->encryptargv($returnarr,$msgmode);
+            return $nlcore->sess->encryptargv($returnClientData,$msgmode);
         }
     }
     /**
      * @description: 返回信息，或抛出403错误，结束程序
      * @param Int code 错误代码
-     * @param String totpsecret 加密用secret（可选，不加则明文返回）
      * @param String str 附加错误信息
      * @param Bool showmsg 是否显示错误信息（否则直接403）
      */
-    function stopmsg($code=null,$totpSecret=null,$str="",$showmsg=true) {
-        if ($code && $showmsg > 0) {
+    function stopmsg(int $code=-1, $str="",$showmsg=true) {
+        $showmsg=true;
+        if ($code > 0 && $showmsg) {
             global $nlcore;
-            $msgmode = $totpSecret ? $totpSecret : 1;
-            $json = $this->m($msgmode,$code,$str,$totpSecret);
+            $msgmode = (strlen($nlcore->sess->publicKey) > 0) ? 0 : 1;
+            $json = $this->m($msgmode,$code,$str);
             header('Content-Type:application/json;charset=utf-8');
-            echo $json;
+            $nlcore->sess->returnToClient($json);
         } else {
             header('HTTP/1.1 403 Forbidden');
         }
@@ -273,4 +272,3 @@ class nysmsg {
         unset($this->imsg);
     }
 }
-?>
