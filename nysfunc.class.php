@@ -452,6 +452,12 @@ class nysfunc {
         }
     }
 
+    function chkNewExInfo($exinfoDic = []) {
+        global $nlcore;
+        // 在此處檢查擴充資訊
+        return $exinfoDic;
+    }
+
     /**
      * @description: 檢查提及（昵称#编号）是否在正文中,並轉換成用戶哈希字符串
      * @param String me 我的用户哈希

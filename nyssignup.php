@@ -13,13 +13,14 @@ $nlcore->sess->decryptargv("signup");
 // 不檢查用戶是否登入
 // 實現功能
 $nyasignup = new nyasignup();
-$returnClientData = $nyasignup->adduser($nlcore, $inputInformation);
+$returnClientData = $nyasignup->adduser($nlcore->sess->argReceived,$nlcore->sess->appToken,$nlcore->sess->ipId);
 // 初始化 z1_info 表
 $tableStr = $nscore->cfg->tables["info"];
-$insertDic = [
+$exinfoDic = [
     "userhash" => $returnClientData["userhash"],
 ];
-$dbreturn = $nlcore->db->insert($tableStr,$insertDic);
-if ($dbreturn[0] >= 2000000) $nscore->msg->stopmsg(4050000);
+$exinfoDic = $zecore->func->chkNewExInfo($exinfoDic);
+$dbreturn = $nlcore->db->insert($tableStr,$exinfoDic);
+if ($dbreturn[0] >= 2000000) $zecore->msg->stopmsg(4050000);
 // 將資訊返回給客戶端
 exit($nlcore->sess->encryptargv($returnClientData));

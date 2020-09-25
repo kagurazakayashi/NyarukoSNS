@@ -17,9 +17,15 @@ $nlcore->sess->userLogged();
 $userinfoedit = new userInfoEdit($nlcore->sess->argReceived, $nlcore->sess->userHash);
 // 批量檢查並加入更新計劃
 $userinfoedit->batchUpdate();
-// 執行資料庫更新
 $nlcore->db->initWriteDbs();
-$updated = $userinfoedit->sqlc();
+$exinfoDic = $zecore->func->chkNewExInfo();
+// 執行資料庫更新
+if (count($exinfoDic) > 0) {
+    $tableStr = $zecore->cfg->tables["info"];
+    $whereDic = ["userhash" => $nlcore->sess->userHash];
+    $result = $this->nlcore->db->update($exinfoDic, $tableStr, $whereDic);
+    if ($result[0] >= 2000000) $this->nlcore->msg->stopmsg(2040604);
+}
 // 將執行結果 JSON 返回到客戶端
 $returnClientData = $nlcore->msg->m(0, 1000000);
 $returnClientData["updated"] = implode(",", $updated);

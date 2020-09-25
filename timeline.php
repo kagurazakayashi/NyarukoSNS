@@ -59,19 +59,19 @@ if (isset($argReceived["post"]) && $nlcore->safe->is_rhash64($argReceived["post"
         $argPrivate = $argReceived["private"];
         if (strlen($argPrivate) == 64 && $nlcore->safe->is_rhash64($argPrivate)) {
             // SQL 只顯示指定使用者發的帖（個人空間模式）
-            $private = "`" . $postsTable . "`.`userhash` = '" . $argPrivate . "' ";
+            $private = " AND `" . $postsTable . "`.`userhash` = '" . $argPrivate . "' ";
         } else if (strcmp($argPrivate, "self") == 0) {
-            $private = "`" . $postsTable . "`.`userhash` = '" . $userHash . "' ";
+            $private = " AND `" . $postsTable . "`.`userhash` = '" . $userHash . "' ";
         } else {
             // SQL 只顯示所關注人發的帖（朋友圈模式）
             $private = ($userHash) ? " AND `" . $postsTable . "`.`userhash` != '" . $userHash . "'AND `" . $postsTable . "`.`userhash` IN (SELECT `" . $followTable . "`.`tuser` FROM `" . $followTable . "` WHERE `" . $followTable . "`.`fuser` = '" . $userHash . "') " : "";
         }
     }
     // SQL 過濾遮蔽的使用者（如果使用者已經登入）
-    $sqlban = $userHash ? "NOT IN (SELECT `" . $banTable . "`.`tuser` FROM `" . $banTable . "` WHERE `" . $banTable . "`.`fuser` = '" . $userHash . "') " : "";
+    $sqlban = $userHash ? " WHERE `" . $postsTable . "`.`userhash` NOT IN (SELECT `" . $banTable . "`.`tuser` FROM `" . $banTable . "` WHERE `" . $banTable . "`.`fuser` = '" . $userHash . "') " : "";
     $sqlbanAprivate = ""; // (strlen($sqlban) > 0 && strlen($private) > 0) ? " AND " : "";
     // SQL 查詢時間線
-    $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash` = `" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON " . $infoTable . ".`userhash` = " . $zinfoTable . ".`userhash` WHERE `" . $postsTable . "`.`userhash` " . $sqlban . $sqlbanAprivate . $private . "ORDER BY date DESC LIMIT " . $limst . "," . $offset . ";";
+    $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash` = `" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON " . $infoTable . ".`userhash` = " . $zinfoTable . ".`userhash`" . $sqlban . $sqlbanAprivate . $private . "ORDER BY date DESC LIMIT " . $limst . "," . $offset . ";";
 }
 $nlcore->db->initReadDbs();
 $dbReturnPost = $nlcore->db->sqlc($sqlcmd);
