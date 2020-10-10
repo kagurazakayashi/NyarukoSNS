@@ -19,11 +19,11 @@ $userinfoedit = new userInfoEdit($nlcore->sess->argReceived, $nlcore->sess->user
 $userinfoedit->batchUpdate();
 $nlcore->db->initWriteDbs();
 $exinfoDic = $zecore->func->chkNewExInfo();
-// 執行資料庫更新
+// 執行資料庫更新:擴充資訊
 if (count($exinfoDic) > 0) {
     $tableStr = $zecore->cfg->tables["info"];
-    $whereDic = ["userhash" => $nlcore->sess->userHash];
-    $result = $this->nlcore->db->update($exinfoDic, $tableStr, $whereDic);
+    $whereDic = ["userhash" => $userinfoedit->userHash];
+    $result = $nlcore->db->update($exinfoDic, $tableStr, $whereDic);
     if ($result[0] >= 2000000) $this->nlcore->msg->stopmsg(2040604);
 }
 // 將執行結果 JSON 返回到客戶端

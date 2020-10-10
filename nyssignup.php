@@ -8,6 +8,7 @@ $phpFileUserSrcDir = $phpFileDir."..".DIRECTORY_SEPARATOR."user".DIRECTORY_SEPAR
 require_once $phpFileDir."nyscore.class.php";
 require_once $phpFileUserSrcDir."nyacore.class.php";
 require_once $phpFileUserSrcDir."nyasignup.class.php";
+require_once $phpFileUserSrcDir."nyauserinfoedit.class.php";
 // IP檢查和解密客戶端提交的資訊
 $nlcore->sess->decryptargv("signup");
 // 不檢查用戶是否登入
