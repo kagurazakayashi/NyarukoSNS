@@ -174,7 +174,8 @@ def postarray(postUrl: "提交到指定的URL", jsonDataArr: "提交的数据数
     postRes = postRes.read()
     if (showAllInfo):
         tlog("↓ 收到数据:")
-    postRes = postRes.decode(encoding='utf-8')
+    postRes0 = postRes.decode(encoding='utf-8')
+    postRes = postRes0
     if (showAllInfo):
         tlog(postRes)
     if postRes[0:3] == '<br':
@@ -197,6 +198,14 @@ def postarray(postUrl: "提交到指定的URL", jsonDataArr: "提交的数据数
         postRes = base64.b64decode(postRes)
     except:
         terr("解析 BASE64 不成功。")
+        if (showAllInfo):
+            tlog("尝试使用明文解密...")
+        try:
+            resArr = json.loads(postRes0)
+            tok(json.dumps(resArr, indent=2))
+            tok(resArr['msg'])
+        except:
+            terr("解析失败。")
         quit()
     if (showAllInfo):
         privateKeyStr = ""
@@ -209,6 +218,14 @@ def postarray(postUrl: "提交到指定的URL", jsonDataArr: "提交的数据数
         postRes = rsaDecrypt(privateKey, postRes, showAllInfo)
     except:
         terr("解密数据不成功。")
+        if (showAllInfo):
+            tlog("尝试使用明文解密...")
+        try:
+            resArr = json.loads(postRes0)
+            tok(json.dumps(resArr, indent=2))
+            tok(resArr['msg'])
+        except:
+            terr("解析失败。")
         quit()
     if (showAllInfo):
         tlog("检查返回的数据 ...")
@@ -222,11 +239,13 @@ def postarray(postUrl: "提交到指定的URL", jsonDataArr: "提交的数据数
     except:
         terr("JSON 解析失败。")
         quit()
-    if resArr['code'] >= 2000000:
+    if (resArr['code'] >= 2000000 and resArr['code'] < 3000000) or resArr['code'] >= 4000000:
         terr("返回状态码错误。")
+        terr(resArr['msg'])
         quit()
     tok("网络操作完成。")
     tok(json.dumps(resArr, indent=2))
+    tok(resArr['msg'])
     return resArr
 
 def clearkey(keystr: "密钥内容"):
