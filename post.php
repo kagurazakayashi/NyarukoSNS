@@ -8,49 +8,7 @@ $phpFileDir = pathinfo(__FILE__)["dirname"] . DIRECTORY_SEPARATOR;
 $phpFileUserSrcDir = $phpFileDir . ".." . DIRECTORY_SEPARATOR . "user" . DIRECTORY_SEPARATOR . "src" . DIRECTORY_SEPARATOR;
 require_once $phpFileDir . "nyscore.class.php";
 require_once $phpFileUserSrcDir . "nyacore.class.php";
-
-/**
- * @description: 獲得tagid，冇有就新建一個
- * @param String tag 標簽哈希
- * @param Int tag ID
- */
-function gettagid(string $tag): int {
-    global $nlcore;
-    global $nscore;
-    $columnArr = ["id", "stat", "hot", "hotmax"];
-    $tableStr = $nscore->cfg->tables["tag"];
-    $whereDic = [
-        "tag" => $tag
-    ];
-    $dbreturn = $nlcore->db->select($columnArr, $tableStr, $whereDic);
-    $tagid = -1;
-    if ($dbreturn[0] == 1010000) { //成功，寫熱度
-        $returndata = $dbreturn[2][0];
-        $tagid = intval($returndata["id"]);
-        $hot = intval($returndata["hot"]) + 1;
-        $hotmax = intval($returndata["hotmax"]) + 1;
-        $updateDic = [
-            "hot" => $hot,
-            "hotmax" => $hotmax
-        ];
-        $whereDic = ["id" => $tagid];
-        $result = $nlcore->db->update($updateDic, $tableStr, $whereDic);
-        if ($dbreturn[0] >= 2000000) {
-            $nscore->msg->stopmsg(4010302);
-        }
-    } else if ($dbreturn[0] == 1010001) { //需要新增
-        $insertDic = ["tag" => $tag];
-        $result = $nlcore->db->insert($tableStr, $insertDic);
-        if ($dbreturn[0] >= 2000000) {
-            $nscore->msg->stopmsg(4010303);
-        } else {
-            $tagid = $result[1];
-        }
-    } else {
-        $nscore->msg->stopmsg(2040108);
-    }
-    return intval($tagid);
-}
+require_once $phpFileDir . "zezetag.class.php";
 
 /**
  * @description: 刪除貼文

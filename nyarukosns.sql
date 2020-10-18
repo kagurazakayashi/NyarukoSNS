@@ -140,16 +140,34 @@ CREATE TABLE `s1_posts` (
 -- --------------------------------------------------------
 
 --
+-- 表的结构 `s1_posttag`
+--
+
+CREATE TABLE `s1_posttag` (
+  `id` bigint NOT NULL COMMENT '序号',
+  `type` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0贴文1评论',
+  `post` char(64) COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT '贴文或评论哈希',
+  `taghash` char(64) COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT '标签哈希'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
+
+-- --------------------------------------------------------
+
+--
 -- 表的结构 `s1_tag`
 --
 
 CREATE TABLE `s1_tag` (
   `id` int UNSIGNED NOT NULL COMMENT 'TAGID',
+  `taghash` char(64) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL COMMENT '标签哈希',
   `tag` tinytext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT 'TAG内容',
   `stat` tinyint(1) NOT NULL DEFAULT '0' COMMENT '状态0正1隐2封',
   `hot` int UNSIGNED NOT NULL DEFAULT '1' COMMENT '当前热度',
   `hotmax` int UNSIGNED NOT NULL DEFAULT '1' COMMENT '最大热度',
-  `ctime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+  `ctime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `type` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0普通1超话',
+  `userhash` char(64) COLLATE utf8mb4_unicode_520_ci DEFAULT NULL COMMENT '创建者用户哈希',
+  `bgimg` text COLLATE utf8mb4_unicode_520_ci COMMENT '背景图片路径',
+  `bgcolor` char(6) CHARACTER SET ascii COLLATE ascii_general_ci DEFAULT NULL COMMENT '主题颜色'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci COMMENT='择择标签表';
 
 --
@@ -160,25 +178,38 @@ CREATE TABLE `s1_tag` (
 -- 表的索引 `s1_ban`
 --
 ALTER TABLE `s1_ban`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fuser` (`fuser`),
+  ADD KEY `tuser` (`tuser`);
 
 --
 -- 表的索引 `s1_comment`
 --
 ALTER TABLE `s1_comment`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `comment` (`comment`);
 
 --
 -- 表的索引 `s1_follow`
 --
 ALTER TABLE `s1_follow`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fuser` (`fuser`),
+  ADD KEY `tuser` (`tuser`);
 
 --
 -- 表的索引 `s1_info`
 --
 ALTER TABLE `s1_info`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `userhash` (`userhash`);
+
+--
+-- 表的索引 `s1_keyword`
+--
+ALTER TABLE `s1_keyword`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `hash` (`hash`);
 
 --
 -- 表的索引 `s1_like`
@@ -190,13 +221,22 @@ ALTER TABLE `s1_like`
 -- 表的索引 `s1_posts`
 --
 ALTER TABLE `s1_posts`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `post` (`post`);
+ALTER TABLE `s1_posts` ADD FULLTEXT KEY `content` (`content`);
+
+--
+-- 表的索引 `s1_posttag`
+--
+ALTER TABLE `s1_posttag`
   ADD PRIMARY KEY (`id`);
 
 --
 -- 表的索引 `s1_tag`
 --
 ALTER TABLE `s1_tag`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `taghash` (`taghash`);
 
 --
 -- 在导出的表使用AUTO_INCREMENT
