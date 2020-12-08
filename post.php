@@ -8,7 +8,7 @@ $phpFileDir = pathinfo(__FILE__)["dirname"] . DIRECTORY_SEPARATOR;
 $phpFileUserSrcDir = $phpFileDir . ".." . DIRECTORY_SEPARATOR . "user" . DIRECTORY_SEPARATOR . "src" . DIRECTORY_SEPARATOR;
 require_once $phpFileDir . "nyscore.class.php";
 require_once $phpFileUserSrcDir . "nyacore.class.php";
-require_once $phpFileDir . "zezetag.class.php";
+require_once $phpFileDir . "nysetag.class.php";
 
 /**
  * @description: 刪除貼文
@@ -106,6 +106,7 @@ if (isset($argReceived["userhash"]) && strcmp($userHash, $argReceived["userhash"
 // 檢查請求模式
 $postmode = 0; //0发布 1修改 2刪除
 $editpost = null;
+$tagMgr = new zezetag();
 if (isset($argReceived["editpost"])) { // 編輯模式
     if (!$nlcore->safe->is_rhash64($argReceived["editpost"])) $nscore->msg->stopmsg(4010500);
     $editpost = $argReceived["editpost"];
@@ -128,6 +129,8 @@ if (isset($argReceived["editpost"])) { // 編輯模式
     $editpost = $argReceived["delpost"];
     $postmode = 2;
     deletepost($editpost);
+    // 資料庫操作：移除標籤
+    $tagMgr->postTagsRemoveAll($editpost);
     $returnClientData = $nscore->msg->m(0, 3000002);
     $returnClientData["post"] = $editpost;
     exit($nlcore->sess->encryptargv($returnClientData));
@@ -217,18 +220,18 @@ if ($mention) {
     }
     $mention = implode(",", $mention);
 }
-// 檢查tag是否在正文中,並轉換成tag
+// 獲取每個標籤的資訊
 $tag = (isset($argReceived["tag"]) && strlen($argReceived["tag"]) > 1) ? $argReceived["tag"] : null;
 if ($tag) {
     $tag = explode(",", $argReceived["tag"]);
     for ($i = 0; $i < count($tag); $i++) {
         $nowtag = $tag[$i];
+        // 檢查tag是否在正文中
         if (strstr($content, $name) == false) {
             $nscore->msg->stopmsg(4010300, $content);
         }
-        $tag[$i] = gettagid($nowtag);
+        $tag[$i] = $tagMgr->postTagExists($nowtag);
     }
-    $tag = implode(",", $tag);
 }
 // 檢查關閉評論
 $nocomment = isset($argReceived["nocomment"]) ? intval($argReceived["nocomment"]) : 0;
@@ -256,7 +259,7 @@ if ($cite && $postmode == 0) {
 $tableStr = $nscore->cfg->tables["posts"];
 $returncode = 4000000;
 if ($postmode == 0) {
-    // 數據庫操作：發帖
+    // 資料庫操作：發帖
     $insertDic = [
         "post" => $posthash,
         "userhash" => $userHash,
@@ -272,9 +275,12 @@ if ($postmode == 0) {
     ];
     $result = $nlcore->db->insert($tableStr, $insertDic);
     if ($result[0] >= 2000000) $nscore->msg->stopmsg(4010003);
+    // 資料庫操作：新增標籤
+    $tagMgr->postTagAutoAdds($tag);
+    $tagMgr->postTagsAutoAddLink($posthash,0,$tag);
     $returncode = 3000000;
 } else if ($postmode == 1) {
-    // 數據庫操作：修改貼文
+    // 資料庫操作：修改貼文
     $updateDic = [
         "title" => $title,
         "type" => $mtype,
@@ -289,6 +295,10 @@ if ($postmode == 0) {
     $whereDic = ["id" => $editpost["id"]];
     $result = $nlcore->db->update($updateDic, $tableStr, $whereDic);
     if ($result[0] >= 2000000) $nscore->msg->stopmsg(4010503);
+    // 資料庫操作：移除標籤並新增標籤
+    $tagMgr->postTagsRemoveAll($editpost);
+    $tagMgr->postTagAutoAdds($tag);
+    $tagMgr->postTagsAutoAddLink($posthash,0,$tag);
     $returncode = 3000001;
 }
 $returnClientData = $nscore->msg->m(0, $returncode);
