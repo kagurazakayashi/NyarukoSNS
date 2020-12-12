@@ -199,7 +199,7 @@ def postarray(postUrl: "提交到指定的URL", jsonDataArr: "提交的数据数
     except:
         terr("解析 BASE64 不成功。")
         if (showAllInfo):
-            tlog("尝试使用明文解密...")
+            tlog("尝试使用明文解析...")
         try:
             resArr = json.loads(postRes0)
             tok(json.dumps(resArr, indent=2))
@@ -219,7 +219,7 @@ def postarray(postUrl: "提交到指定的URL", jsonDataArr: "提交的数据数
     except:
         terr("解密数据不成功。")
         if (showAllInfo):
-            tlog("尝试使用明文解密...")
+            tlog("尝试使用明文解析...")
         try:
             resArr = json.loads(postRes0)
             tok(json.dumps(resArr, indent=2))

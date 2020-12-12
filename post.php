@@ -138,8 +138,7 @@ if (isset($argReceived["editpost"])) { // 編輯模式
 }
 // 檢查標題
 $title = $argReceived["title"] ?? null;
-$banwords = $nlcore->safe->wordfilter($title, true);
-if ($banwords[0] == true) $nscore->msg->stopmsg(2020300);
+$nlcore->safe->wordfilter($title);
 // 檢查媒體類型
 $mtype = "TEXT";
 if (isset($argReceived["mtype"])) {
@@ -203,8 +202,7 @@ if (strlen($content) == 0) {
 }
 $contentlen = strlen($content);
 if ($contentlen == 0 && !$files && !$cite) $nscore->msg->stopmsg(4010000);
-$banwords = $nlcore->safe->wordfilter($content, true);
-if ($banwords[0] == true) $nlcore->msg->stopmsg(2020300, "content");
+$nlcore->safe->wordfilter($content);
 // 檢查提及是否在正文中,並轉換成用戶哈希字符串
 $mention = (isset($argReceived["mention"]) && strlen($argReceived["mention"]) > 5) ? $argReceived["mention"] : null;
 if ($mention) {
@@ -277,7 +275,7 @@ if ($postmode == 0) {
     if ($result[0] >= 2000000) $nscore->msg->stopmsg(4010003);
     // 資料庫操作：新增標籤
     $tagMgr->postTagAutoAdds($tag);
-    $tagMgr->postTagsAutoAddLink($posthash,0,$tag);
+    $tagMgr->postTagsAutoAddLink($posthash, 0, $tag);
     $returncode = 3000000;
 } else if ($postmode == 1) {
     // 資料庫操作：修改貼文
@@ -298,7 +296,7 @@ if ($postmode == 0) {
     // 資料庫操作：移除標籤並新增標籤
     $tagMgr->postTagsRemoveAll($editpost);
     $tagMgr->postTagAutoAdds($tag);
-    $tagMgr->postTagsAutoAddLink($posthash,0,$tag);
+    $tagMgr->postTagsAutoAddLink($posthash, 0, $tag);
     $returncode = 3000001;
 }
 $returnClientData = $nscore->msg->m(0, $returncode);

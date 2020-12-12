@@ -28,6 +28,8 @@ $infoTable = $nlcore->cfg->db->tables["info"];
 $zinfoTable = $nscore->cfg->tables["info"];
 $commentTable = $nscore->cfg->tables["comment"];
 $followTable = $nscore->cfg->tables["follow"];
+$posttagTable = $zecore->cfg->tables["posttag"];
+$tagTable = $zecore->cfg->tables["tag"];
 $fileNone = ["path" => ""];
 $selectCmd = "";
 $columnArrs = [];
@@ -66,6 +68,11 @@ if (isset($argReceived["post"]) && $nlcore->safe->is_rhash64($argReceived["post"
             // SQL 只顯示所關注人發的帖（朋友圈模式）
             $private = ($userHash) ? " AND `" . $postsTable . "`.`userhash` != '" . $userHash . "'AND `" . $postsTable . "`.`userhash` IN (SELECT `" . $followTable . "`.`tuser` FROM `" . $followTable . "` WHERE `" . $followTable . "`.`fuser` = '" . $userHash . "') " : "";
         }
+    } else if (isset($argReceived["tag"])) {
+        // 檢查 tag 敏感詞
+        $tag = $argReceived["tag"];
+        $nlcore->safe->wordfilter($tag);
+        $private = " AND `" . $postsTable . "`.`post` IN (SELECT `" . $posttagTable . "`.`post` FROM `" . $posttagTable . "` WHERE `taghash` IN (SELECT `" . $tagTable . "`.`taghash` FROM `" . $tagTable . "` WHERE `tag`='" . $tag . "')) ";
     }
     // SQL 過濾遮蔽的使用者（如果使用者已經登入）
     $sqlban = $userHash ? " WHERE `" . $postsTable . "`.`userhash` NOT IN (SELECT `" . $banTable . "`.`tuser` FROM `" . $banTable . "` WHERE `" . $banTable . "`.`fuser` = '" . $userHash . "') " : "";
