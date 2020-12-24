@@ -56,8 +56,9 @@ class nystag {
             }
             if ($gettype == 1) return array_values($tagInfo);
             if ($gettype == 2 || $gettype == 3) return $tagInfo;
+        } else if ($dbReturn[0] >= 2000000) {
+            $nscore->msg->stopmsg(4010304, strval($potype) . ':' . $pohash);
         }
-        $nscore->msg->stopmsg(4010304, strval($potype) . ':' . $pohash);
         return [];
     }
 
@@ -90,7 +91,7 @@ class nystag {
      * @param Int potype 指定是 0貼文 1評論
      * @param String taghash 標籤雜湊
      */
-    function postTagsAddLink(string $pohash, int $potype = 0, string $taghash):void {
+    function postTagsAddLink(string $pohash, int $potype = 0, string $taghash): void {
         global $nlcore;
         global $nscore;
         $tableStr = $nscore->cfg->tables["posttag"];
@@ -115,7 +116,7 @@ class nystag {
         global $nlcore;
         global $nscore;
         $tableStr = $nscore->cfg->tables["tag"];
-        $columnArr = ["id", "tag", "taghash", "stat", "hot", "hotday", "hotweek", "hotmon", "hotyear", "hotmax"];
+        $columnArr = ["*"];
         $whereDic = [
             "tag" => $tagName
         ];
@@ -172,15 +173,16 @@ class nystag {
     /**
      * @description: 根據函式 postTagExists 的結果，自動選擇是新增標籤還是增長標籤熱度
      * @param Array postTagExistsData postTagExists函式返回的陣列
-     * @return Int 新建或被修改的 tag ID。
+     * @param String userhash 建立者使用者雜湊
+     * @return Array 修改后的 postTagExistsData
      */
-    function postTagAutoAdd(array $postTagExistsData): int {
+    function postTagAutoAdd(array $postTagExistsData, string $userhash = ""): array {
         if (count($postTagExistsData) == 1) {
-            return $this->postTagNew($postTagExistsData["tag"]);
+            $postTagExistsData["taghash"] = $this->postTagNew($postTagExistsData["tag"], $userhash);
         } else if (count($postTagExistsData) > 1) {
-            return $this->postTagAddHot($postTagExistsData);
+            $this->postTagAddHot($postTagExistsData);
         }
-        return -1;
+        return $postTagExistsData;
     }
 
     /**
@@ -214,9 +216,10 @@ class nystag {
     /**
      * @description: 登記一個新的標籤雜湊（先透過 postTagExists 函式檢查是否需要）
      * @param String tagName 標簽內容
-     * @return Int 新建的 tag ID
+     * @param String userhash 建立者使用者雜湊
+     * @return String 新建的 tagHash
      */
-    function postTagNew(string $tagName): int {
+    function postTagNew(string $tagName, string $userhash = ""): string {
         global $nlcore;
         global $nscore;
         $tableStr = $nscore->cfg->tables["tag"];
@@ -225,10 +228,71 @@ class nystag {
             "taghash" => $tagHash,
             "tag" => $tagName
         ];
+        if (strlen($userhash) > 0) $insertDic["userhash"] = $userhash;
         $result = $nlcore->db->insert($tableStr, $insertDic);
         if ($result[0] >= 2000000) {
             $nscore->msg->stopmsg(4010303);
         }
-        return intval($result[1]);
+        return $tagHash; //intval($result[1]);
+    }
+
+    /**
+     * @description: 將某個標籤升級為超話或者修改超話資訊
+     * @param String tagName 標簽內容
+     * @param String userhash 使用者雜湊
+     * @param Bool force 強行替代原有主持人
+     * @param Bool isAdd T:更新信息 F:取消超话
+     * @param Sting bgimg 背景图片路径
+     * @param Int bgcolor 主题颜色
+     * @param Sting describes 介绍文本
+     * @return Int 状态代码
+     */
+    function supertag(string $tagName, string $userhash, bool $isAdd = true, string $bgimg = "", int $bgcolor = 0, string $describes = "", bool $force = false) {
+        global $nlcore;
+        global $nscore;
+        $existsTagInfo = $this->postTagExists($tagName);
+        $rcode = -1;
+        // 標籤是否存在
+        if (count($existsTagInfo) == 1) {
+            // 不存在，建立該標籤
+            $existsTagInfo["taghash"] = $this->postTagNew($tagName, $userhash);
+            $existsTagInfo["type"] = -1;
+        }
+        // 標籤是否已經是超話
+        $tagType = intval($existsTagInfo["type"]);
+        if ($tagType == 1) {
+            // 已經是超話，主持人是不是自己
+            if (strcmp($existsTagInfo["userhash"], $userhash) != 0) {
+                // 主持人不是自己，是否要強行替代原有主持人
+                if (!$force) {
+                    $nscore->msg->stopmsg(4010309);
+                } else {
+                    $rcode = 3000402;
+                }
+            } else {
+                $rcode = 3000401;
+            }
+        } else if ($tagType == -1) {
+            $rcode = 3000404;
+        } else {
+            $rcode = 3000400;
+        }
+        $nowTime = $nlcore->safe->getnowtimestr();
+        $tableStr = $nscore->cfg->tables["tag"];
+        $updateDic = [
+            "type" => $isAdd ? "1" : "0",
+            "stime" => $isAdd ? $nowTime : null,
+            "userhash" => $isAdd ? $userhash : null,
+            "bgimg" => $isAdd ? $bgimg : null,
+            "bgcolor" => $isAdd ? strval($bgcolor) : null,
+            "describes" => $isAdd ? $describes : null
+        ];
+        if (!$isAdd) $rcode = 3000403;
+        $whereDic = ["tag" => $tagName];
+        $result = $nlcore->db->update($updateDic, $tableStr, $whereDic);
+        if ($result[0] >= 2000000) {
+            $nscore->msg->stopmsg(4010302);
+        }
+        return $rcode;
     }
 }
