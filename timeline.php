@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @description: 時間線
  * @package NyarukoSNS
@@ -45,7 +44,7 @@ $columnArrs = array_merge($columnArrs, $columnArr);
 foreach ($columnArr as $column) {
     $selectCmd .= ",`" . $zinfoTable . "`.`" . $column . "`";
 }
-$columnArr = ["post", "userhash", "date", "modified", "title", "type", "content", "tag", "files", "share", "mention", "nocomment", "noforward", "cite", "forwardnum", "commentnum", "likenum"];
+$columnArr = ["post", "userhash", "date", "modified", "title", "type", "content", "files", "share", "mention", "nocomment", "noforward", "cite", "forwardnum", "commentnum", "likenum"];
 $columnArrs = array_merge($columnArrs, $columnArr);
 foreach ($columnArr as $column) {
     $selectCmd .= ",`" . $postsTable . "`.`" . $column . "`";

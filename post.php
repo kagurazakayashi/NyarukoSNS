@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @description: 貼文增刪改查
  * @package NyarukoSNS
@@ -225,7 +224,7 @@ if ($tag) {
     for ($i = 0; $i < count($tag); $i++) {
         $nowtag = $tag[$i];
         // 檢查tag是否在正文中
-        if (strstr($content, $name) == false) {
+        if (strstr($content, $nowtag) == false) {
             $nscore->msg->stopmsg(4010300, $content);
         }
         $tag[$i] = $tagMgr->postTagExists($nowtag);
@@ -274,7 +273,10 @@ if ($postmode == 0) {
     $result = $nlcore->db->insert($tableStr, $insertDic);
     if ($result[0] >= 2000000) $nscore->msg->stopmsg(4010003);
     // 資料庫操作：新增標籤
-    $tagMgr->postTagAutoAdds($tag);
+    if ($tag) {
+        $tag = $tagMgr->postTagAutoAdds($tag);
+        $tagMgr->postTagsAutoAddLink($posthash, 0, $tag);
+    }
     $tagMgr->postTagsAutoAddLink($posthash, 0, $tag);
     $returncode = 3000000;
 } else if ($postmode == 1) {
