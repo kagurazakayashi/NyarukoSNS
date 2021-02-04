@@ -10,26 +10,26 @@ require_once $phpFileUserSrcDir."nyacore.class.php";
 function userinfo($userHash) {
     global $nlcore;
     global $nscore;
-    $infoTable = $nlcore->cfg->db->tables["info"];
+    $uinfoTable = $nlcore->cfg->db->tables["info"];
     $zinfoTable = $nscore->cfg->tables["info"];
     $columnArr = [
-        [$infoTable,"userhash"],
-        [$infoTable,"belong"],
-        [$infoTable,"infotype"],
-        [$infoTable,"name"],
-        [$infoTable,"nameid"],
-        [$infoTable,"gender"],
-        [$infoTable,"pronoun"],
-        [$infoTable,"address"],
-        [$infoTable,"profile"],
-        [$infoTable,"description"],
-        [$infoTable,"image"],
-        [$infoTable,"background"],
+        [$uinfoTable,"userhash"],
+        [$uinfoTable,"belong"],
+        [$uinfoTable,"infotype"],
+        [$uinfoTable,"name"],
+        [$uinfoTable,"nameid"],
+        [$uinfoTable,"gender"],
+        [$uinfoTable,"pronoun"],
+        [$uinfoTable,"address"],
+        [$uinfoTable,"profile"],
+        [$uinfoTable,"description"],
+        [$uinfoTable,"image"],
+        [$uinfoTable,"background"],
         [$zinfoTable,"following"],
         [$zinfoTable,"followers"],
         [$zinfoTable,"postnum"]
     ];
-    $tableStr = "`".$infoTable."` JOIN `".$zinfoTable."` ON `".$infoTable."`.`userhash` = `".$zinfoTable."`.`userhash`";
+    $tableStr = "`".$uinfoTable."` JOIN `".$zinfoTable."` ON `".$uinfoTable."`.`userhash` = `".$zinfoTable."`.`userhash`";
     $whereDic = ["u1_info.userhash" => $userHash];
     $result = $nlcore->db->select($columnArr,$tableStr,$whereDic);
     $userinfo = $nlcore->func->getuserinfo($userHash,$result);

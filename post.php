@@ -5,8 +5,9 @@
  */
 $phpFileDir = pathinfo(__FILE__)["dirname"] . DIRECTORY_SEPARATOR;
 $phpFileUserSrcDir = $phpFileDir . ".." . DIRECTORY_SEPARATOR . "user" . DIRECTORY_SEPARATOR . "src" . DIRECTORY_SEPARATOR;
-require_once $phpFileDir . "nyscore.class.php";
 require_once $phpFileUserSrcDir . "nyacore.class.php";
+require_once $phpFileUserSrcDir . "nyamessage.class.php";
+require_once $phpFileDir . "nyscore.class.php";
 require_once $phpFileDir . "nysetag.class.php";
 
 /**
@@ -203,20 +204,9 @@ $contentlen = strlen($content);
 if ($contentlen == 0 && !$files && !$cite) $nscore->msg->stopmsg(4010000);
 $nlcore->safe->wordfilter($content);
 // 檢查提及是否在正文中,並轉換成用戶哈希字符串
-$mention = (isset($argReceived["mention"]) && strlen($argReceived["mention"]) > 5) ? $argReceived["mention"] : null;
-if ($mention) {
-    $mention = explode(",", $argReceived["mention"]);
-    for ($i = 0; $i < count($mention); $i++) {
-        $nowmention = $mention[$i];
-        $namearr = explode($nscore->cfg->separator["namelink"], $nowmention);
-        $name = $namearr[0];
-        if (strstr($content, $name) == false) {
-            $nscore->msg->stopmsg(4010101, $content);
-        }
-        $mention[$i] = $nlcore->func->fullnickname2userhash($namearr)[2];
-    }
-    $mention = implode(",", $mention);
-}
+$mention = (isset($argReceived["mention"]) && strlen($argReceived["mention"]) > 5) ? explode(",", $argReceived["mention"]) : null;
+$mentionArr = $zecore->func->mention($mention ?? [],$content);
+$mention = implode(",", $mentionArr);
 // 獲取每個標籤的資訊
 $tag = (isset($argReceived["tag"]) && strlen($argReceived["tag"]) > 1) ? $argReceived["tag"] : null;
 if ($tag) {
@@ -237,22 +227,7 @@ $noforward = isset($argReceived["noforward"]) ? intval($argReceived["noforward"]
 if (($nocomment != 0 && $nocomment != 1) || ($noforward != 0 && $noforward != 1)) $nscore->msg->stopmsg(4010001);
 // 創建隨機哈希
 $posthash = $nlcore->safe->randhash();
-// 过滤正文
-// $content = addslashes($content);
-if ($cite && $postmode == 0) {
-    // 為對方轉發數+1
-    $forwardnum = intval($target["forwardnum"]) + 1;
-    $forwardmax = intval($target["forwardmax"]) + 1;
-    $updateDic = [
-        "forwardnum" => $forwardnum,
-        "forwardmax" => $forwardmax
-    ];
-    $whereDic = ["id" => $targetid];
-    $result = $nlcore->db->update($updateDic, $tableStr, $whereDic);
-    if ($dbreturn[0] >= 2000000) {
-        $nscore->msg->stopmsg(4010402);
-    }
-}
+// 開始執行貼文相關操作
 $tableStr = $nscore->cfg->tables["posts"];
 $returncode = 4000000;
 if ($postmode == 0) {
@@ -301,6 +276,25 @@ if ($postmode == 0) {
     $tagMgr->postTagsAutoAddLink($posthash, 0, $tag);
     $returncode = 3000001;
 }
+// 開始執行貼文所關聯內容的相關操作
+// 為對方轉發數+1
+if ($cite && $postmode == 0) {
+    $forwardnum = intval($target["forwardnum"]) + 1;
+    $forwardmax = intval($target["forwardmax"]) + 1;
+    $updateDic = [
+        "forwardnum" => $forwardnum,
+        "forwardmax" => $forwardmax
+    ];
+    $whereDic = ["id" => $targetid];
+    $result = $nlcore->db->update($updateDic, $tableStr, $whereDic);
+    if ($dbreturn[0] >= 2000000) {
+        $nscore->msg->stopmsg(4010402);
+    }
+}
+// 向被提及的使用者傳送站內信
+$nyamessage = new nyamessage();
+$nyamessage->newMessage($mentionArr,[$userHash],"PAT",$posthash);
+// 將結果返回到客戶端
 $returnClientData = $nscore->msg->m(0, $returncode);
 $returnClientData["post"] = $posthash;
 exit($nlcore->sess->encryptargv($returnClientData));

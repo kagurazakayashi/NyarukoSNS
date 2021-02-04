@@ -459,12 +459,17 @@ class nysfunc {
     }
 
     /**
-     * @description: 檢查提及（昵称#编号）是否在正文中,並轉換成用戶哈希字符串
-     * @param String me 我的用户哈希
-     * @param String who 对方的用户哈希
+     * @description: 檢查提及（暱稱編號）是否在正文中,並轉換成使用者雜湊字串
+     * @param Array mention 被提及使用者列表（可以为空数组）
+     * @param String content 正文內容
+     * @return Array 被提及使用者的雜湊列表（可以为空数组）
      */
-    function mention() { //TODO:!!!
-        $mention = explode(",", $argReceived["mention"]);
+    function mention(array $mention=[], string $content): array {
+        global $nlcore;
+        global $nscore;
+        if ($mention == null) {
+            return [];
+        }
         for ($i = 0; $i < count($mention); $i++) {
             $nowmention = $mention[$i];
             $namearr = explode($nscore->cfg->separator["namelink"], $nowmention);
@@ -474,6 +479,6 @@ class nysfunc {
             }
             $mention[$i] = $nlcore->func->fullnickname2userhash($namearr)[2];
         }
-        $mention = implode(",", $mention);
+        return $mention;
     }
 }
