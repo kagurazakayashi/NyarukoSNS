@@ -53,7 +53,11 @@ $sqlcmd = "";
 // 查詢貼文列表
 $private = "";
 if (isset($argReceived["post"]) && $nlcore->safe->is_rhash64($argReceived["post"])) {
-    $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash` = `" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON " . $infoTable . ".`userhash` = " . $zinfoTable . ".`userhash` WHERE `" . $postsTable . "`.`post`='" . $argReceived["post"] . "';";
+    // 只顯示指定的某個貼文
+    $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash`=`" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON `" . $infoTable . "`.`userhash` = `" . $zinfoTable . "`.`userhash` WHERE `" . $postsTable . "`.`post`='" . $argReceived["post"] . "';";
+} else if (isset($argReceived["comment"]) && $nlcore->safe->is_rhash64($argReceived["comment"])) {
+    // 只顯示指定的某個貼文，根據評論雜湊找到這個貼文
+    $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash`=`" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON `" . $infoTable . "`.`userhash` = `" . $zinfoTable . "`.`userhash` WHERE `post`=(SELECT `post` FROM `" . $commentTable . "` WHERE `comment`='" . $argReceived["comment"] . "');";
 } else {
     // 限制獲取貼文範圍
     if (isset($argReceived["private"])) {
