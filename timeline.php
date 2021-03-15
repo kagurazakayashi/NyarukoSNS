@@ -27,8 +27,8 @@ $infoTable = $nlcore->cfg->db->tables["info"];
 $zinfoTable = $nscore->cfg->tables["info"];
 $commentTable = $nscore->cfg->tables["comment"];
 $followTable = $nscore->cfg->tables["follow"];
-$posttagTable = $zecore->cfg->tables["posttag"];
-$tagTable = $zecore->cfg->tables["tag"];
+$posttagTable = $nscore->cfg->tables["posttag"];
+$tagTable = $nscore->cfg->tables["tag"];
 $fileNone = ["path" => ""];
 $selectCmd = "";
 $columnArrs = [];
@@ -52,12 +52,13 @@ foreach ($columnArr as $column) {
 $sqlcmd = "";
 // 查詢貼文列表
 $private = "";
+$statusDisplay = " AND `" . $postsTable . "`.`status` NOT IN ('DELETED', 'BANNED')";
 if (isset($argReceived["post"]) && $nlcore->safe->is_rhash64($argReceived["post"])) {
     // 只顯示指定的某個貼文
-    $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash`=`" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON `" . $infoTable . "`.`userhash` = `" . $zinfoTable . "`.`userhash` WHERE `" . $postsTable . "`.`post`='" . $argReceived["post"] . "';";
+    $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash`=`" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON `" . $infoTable . "`.`userhash` = `" . $zinfoTable . "`.`userhash` WHERE `" . $postsTable . "`.`post`='" . $argReceived["post"] . "'" . $statusDisplay . ";";
 } else if (isset($argReceived["comment"]) && $nlcore->safe->is_rhash64($argReceived["comment"])) {
     // 只顯示指定的某個貼文，根據評論雜湊找到這個貼文
-    $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash`=`" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON `" . $infoTable . "`.`userhash` = `" . $zinfoTable . "`.`userhash` WHERE `post`=(SELECT `post` FROM `" . $commentTable . "` WHERE `comment`='" . $argReceived["comment"] . "');";
+    $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $postsTable . "` JOIN `" . $infoTable . "` ON `" . $postsTable . "`.`userhash`=`" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON `" . $infoTable . "`.`userhash` = `" . $zinfoTable . "`.`userhash` WHERE `post`=(SELECT `post` FROM `" . $commentTable . "` WHERE `comment`='" . $argReceived["comment"] . "')" . $statusDisplay . ";";
 } else {
     // 限制獲取貼文範圍
     if (isset($argReceived["private"])) {
@@ -143,8 +144,9 @@ if ($dbReturnPost[0] == 1010000) {
         }
         $posthashcmd = implode(" OR ", $posthashs);
         // 集中獲取按日期排序的每條貼文的前三條評論
+        $statusDisplay = " AND `" . $commentTable . "`.`status` NOT IN ('DELETED', 'BANNED')";
         $sqlban = $userHash ? "NOT IN (SELECT `" . $banTable . "`.`tuser` FROM `" . $banTable . "` WHERE `" . $banTable . "`.`fuser` = '" . $userHash . "') " : "";
-        $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $commentTable . "` JOIN `" . $infoTable . "` ON `" . $commentTable . "`.`userhash` = `" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON `" . $infoTable . "`.`userhash` = `" . $zinfoTable . "`.`userhash` WHERE (" . $posthashcmd . ") AND `" . $infoTable . "`.`userhash` " . $sqlban . "ORDER BY date DESC;";
+        $sqlcmd = "SELECT " . $selectCmd . " FROM `" . $commentTable . "` JOIN `" . $infoTable . "` ON `" . $commentTable . "`.`userhash` = `" . $infoTable . "`.`userhash` JOIN `" . $zinfoTable . "` ON `" . $infoTable . "`.`userhash` = `" . $zinfoTable . "`.`userhash` WHERE (" . $posthashcmd . ") AND `" . $infoTable . "`.`userhash` " . $sqlban . $statusDisplay . "ORDER BY date DESC;";
         $nlcore->db->initReadDbs();
         $dbReturnComm = $nlcore->db->sqlc($sqlcmd);
         if ($dbReturnComm[0] >= 2000000) $nscore->msg->stopmsg(4020300);

@@ -46,7 +46,8 @@ foreach ($columnArr as $column) {
     $selectCmd .= ",`".$commentTable."`.`".$column."`";
 }
 $sqlBan = $userHash ? "NOT IN (SELECT `".$banTable."`.`tuser` FROM `".$banTable."` WHERE `".$banTable."`.`fuser` = '".$userHash."') " : "";
-$sqlcmd = "SELECT ".$selectCmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$commentTable."`.`userhash` ".$sqlBan."AND `".$commentTable."`.`post`='".$post."' ORDER BY date DESC LIMIT ".$limst.",". $offset.";";
+$statusDisplay = " AND `" . $commentTable . "`.`status` NOT IN ('DELETED', 'BANNED')";
+$sqlcmd = "SELECT ".$selectCmd." FROM `".$commentTable."` JOIN `".$infoTable."` ON `".$commentTable."`.`userhash` = `".$infoTable."`.`userhash` JOIN `".$zinfoTable."` ON ".$infoTable.".`userhash` = ".$zinfoTable.".`userhash` WHERE `".$commentTable."`.`userhash` ".$sqlBan.$statusDisplay." AND `".$commentTable."`.`post`='".$post."' ORDER BY date DESC LIMIT ".$limst.",". $offset.";";
 $nlcore->db->initReadDbs();
 $dbReturn = $nlcore->db->sqlc($sqlcmd);
 $returnClientData = $nscore->msg->m(0,3000201);
